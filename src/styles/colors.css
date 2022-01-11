@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	:root {
+		/* Theme agnostic colors */
+		--highlight-color: #047aff;
+		--lowlight-color: #047aff66; /* #047aff with 40% alpha. 40/100x255 = 102 = 66 in hexidecimal */
+		--bg-reminder-color: #f3f6f966;
+		--border-base-color: #bdd6e8;
+		--pending-green-color: #44d7b6;
+		--bg-reminder-dot: #e02020;
+
+		/* Light mode */
+		--bg-base-color: #fafcff;
+		--bg-toast-color: #ffffff;
+		--bg-middleground-color: #ffffff;
+		--bg-foreground-color: #ffffff;
+		--bg-input-color: #fbfbfd;
+		--bg-dropdown-hover-color: rgba(75, 116, 255, 0.1);
+		--text-base-color: #1d2024;
+		--text-secondary-color: #616a77;
+		--text-muted-color: #737478;
+		--border-muted-color: #cad7e9;
+		--bg-modal-header-color: var(--highlight-color);
+		--bg-line-divider-color: #dbe4f0;
+		--bg-disabled-rect-color: #bfbfbf;
+		--bg-viteconnect-confirm-color: #f5f9ff;
+	}
+
+	.dark {
+		--bg-base-color: #01081f;
+		--bg-toast-color: #18203a;
+		--bg-middleground-color: #151c33;
+		--bg-foreground-color: #1a2546;
+		--bg-input-color: #10162d;
+		--bg-dropdown-hover-color: #1e2745;
+		--text-base-color: #ffffff;
+		--text-secondary-color: #cfd1d8;
+		--text-muted-color: #7f8ba1;
+		--border-muted-color: #373e50;
+		--bg-modal-header-color: #10162d;
+		--bg-line-divider-color: #0f3871;
+		--bg-disabled-rect-color: #535f75;
+		--bg-viteconnect-confirm-color: #162240;
+	}
+}

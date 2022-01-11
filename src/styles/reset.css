@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+	/* -webkit-font-smoothing: antialiased; */
+	@apply text-skin-base bg-skin-base font-medium;
+}
+
+button,
+input,
+select,
+textarea {
+	@apply outline-none bg-transparent;
+}
+
+select {
+	appearance: none;
+}
+
+button[disabled] {
+	@apply cursor-default;
+}
