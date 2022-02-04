@@ -487,7 +487,7 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 											<div className="">
 												<p className="text-sm">{platform}</p>
 												<p className="text-sm font-normal text-skin-secondary">
-													{i18n.network} {desc}
+													{i18n.network} : {desc}
 												</p>
 											</div>
 										</div>
