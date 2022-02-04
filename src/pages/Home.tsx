@@ -253,6 +253,7 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 		} catch (e: any) {
 			console.log('e:', e);
 			walletPromptLoadingSet(false);
+			confirmingViteConnectSet(false);
 			if (e?.code) {
 				// usually { code: 11012, message: "User Canceled" }
 				// @ts-ignore
