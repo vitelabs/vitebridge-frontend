@@ -1,7 +1,5 @@
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import HomePage from '../pages/Home';
-import HistoryPage from '../pages/History';
-import HelpPage from '../pages/Help';
 import PageContainer from './PageContainer';
 import { connect } from '../utils/global-context';
 import { useCallback, useEffect } from 'react';
@@ -44,6 +42,7 @@ const Router = ({ setState, vbInstance, networkType }: Props) => {
 							tokenUpdates[tti] = tokenInfo;
 						});
 						setState({ balances: balanceUpdates, tokens: tokenUpdates }, { deepMerge: true });
+						console.log('balanceUpdates:', balanceUpdates);
 					}
 				})
 				.catch((e) => {
@@ -82,8 +81,7 @@ const Router = ({ setState, vbInstance, networkType }: Props) => {
 			<PageContainer>
 				<Routes>
 					<Route path="/" element={<HomePage />} />
-					<Route path="/history" element={<HistoryPage />} />
-					<Route path="/help" element={<HelpPage />} />
+					{/* <Route path="/history" element={<HistoryPage />} /> */}
 					<Route path="*" element={<Navigate to="/" />} />
 				</Routes>
 			</PageContainer>

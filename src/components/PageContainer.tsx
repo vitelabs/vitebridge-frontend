@@ -33,18 +33,27 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 					>
 						Bridge
 					</A>
-					<A
+					{/* <A
 						to="/history"
 						className={`relative text-sm font-semibold xy ${
 							pathname === '/history' ? 'active-tab' : 'text-skin-muted'
 						}`}
 					>
 						{i18n.history}
+					</A> */}
+					<A
+						href="https://medium.com/vitelabs/vitebridge-0-1-bug-bounty-program-109ce87bda2e"
+						className={`relative text-sm font-semibold xy`}
+					>
+						Bug Bounty
 					</A>
 					<A
-						to="/help"
-						className={`relative text-sm font-semibold xy ${pathname === '/help' ? 'active-tab' : 'text-skin-muted'}`}
+						href="https://medium.com/vitelabs/vitebridge-0-1-testnet-tutorial-1f3382f389f7"
+						className={`relative text-sm font-semibold xy`}
 					>
+						Tutorial
+					</A>
+					<A href="https://t.me/vite_en" className={`relative text-sm font-semibold xy`}>
 						{i18n.help}
 					</A>
 				</div>

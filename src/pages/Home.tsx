@@ -17,7 +17,6 @@ import IconCircle from '../components/IconCircle';
 import Logout from '../assets/Logout';
 import Link from '../assets/Link';
 import ExternalLink from '../assets/ExternalLink';
-import Duplicate from '../assets/Duplicate';
 import A from '../components/A';
 import Modal from '../components/Modal';
 import Checkbox from '../components/Checkbox';
@@ -29,6 +28,8 @@ import Check from '../assets/Check';
 import PendingDots from '../components/PendingDots';
 import { getBridgeTx } from '../utils/services/conversion';
 import { metaMaskIsSupported } from '../utils/wallet';
+// import CopyCheck from '../components/CopyCheck';
+import Duplicate from '../assets/Duplicate';
 
 const sleep = (seconds = 0): Promise<void> => new Promise((res) => setTimeout(() => res(), seconds));
 
@@ -80,6 +81,7 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 				return balances.bsc[networkType][channelFrom.erc20!];
 			}
 		}
+		return '...';
 	}, [balances, networkType, channelFrom]);
 
 	const fromWallet = useMemo(
@@ -279,7 +281,16 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 
 	return (
 		<div className="m-5 xy flex-col lg:flex-row lg:items-start lg:justify-center">
-			<div className="flex-1 hidden lg:flex"></div>
+			<div className="flex-1 hidden lg:flex flex-col">
+				{/* <div className="text-sm text-skin-highlight mt-20 ml-20 flex flex-col gap-7">
+					<A href="https://medium.com/vitelabs/vitebridge-0-1-testnet-tutorial-1f3382f389f7">
+						ViteBridge 0.1 Testnet Tutorial
+					</A>
+					<A href="https://medium.com/vitelabs/vitebridge-0-1-bug-bounty-program-109ce87bda2e">
+						ViteBridge 0.1 Bug Bounty Program
+					</A>
+				</div> */}
+			</div>
 			<div className="w-full flex flex-col min-h-[48rem] max-w-2xl py-10 rounded-sm shadow-skin-base bg-skin-middleground">
 				<div className="px-10 flex-1">
 					<p className="text-lg mb-5 font-semibold">{i18n.chooseAsset}</p>
@@ -289,8 +300,8 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 						options={assetOptions}
 						onPick={(_, i) => {
 							assetIndexSet(i);
-							fromNetworkIndexSet(0);
-							toNetworkIndexSet(1);
+							// fromNetworkIndexSet(0);
+							// toNetworkIndexSet(1);
 						}}
 					/>
 					<div className="xy my-9 xy gap-3">
@@ -338,7 +349,7 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 								<div className="flex justify-between">
 									<p className="mb-3 text-xs font-semibold">{i18n.amount}</p>
 									<p className="mb-3 text-xs font-normal">
-										{i18n.balance}: {assetBalance || '...'}
+										{i18n.balance}: {assetBalance}
 									</p>
 								</div>
 								<div className="border border-skin-muted dark:border-none bg-skin-input text-sm flex items-center rounded-sm">
@@ -463,18 +474,22 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 								address: vbInstance?.accounts[0],
 								// `vbInstance?.killSession` doesn't work by itself for some reason
 								logOut: vbInstance?.killSession && (() => vbInstance.killSession()),
-								balance: balances?.vite?.[networkType]?.[viteTokenId] || '...',
-								addressExplorerURL: `https://vitescan.io/address/${vbInstance?.accounts[0]}`,
+								balance: balances?.vite?.[networkType]?.[viteTokenId],
+								addressExplorerURL: `https://${networkType === 'testnet' ? 'test.' : ''}vitescan.io/address/${
+									vbInstance?.accounts[0]
+								}`,
 							},
 							MetaMask: {
 								address: metamaskAddress,
-								balance: balances?.bsc?.[networkType]?.bnb || '...',
+								balance: balances?.bsc?.[networkType]?.bnb,
 								addressExplorerURL: `https://${
 									networkType === 'testnet' ? 'testnet.' : ''
 								}bscscan.com/address/${metamaskAddress}`,
 							},
 						}[walletType];
 						const connected = !!wallet?.address;
+						const roundedBalance = connected ? Math.floor(+wallet.balance * 10000) / 10000 : null;
+
 						return (
 							<div
 								key={platform}
@@ -518,16 +533,17 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 												{platform} {i18n.address} : {shortenAddress(wallet.address)}
 											</p>
 											<div className="xy gap-1 text-skin-muted">
-												<button onClick={() => copyToClipboardAsync(wallet.address)}>
+												<button onClick={() => copyWithToast(wallet.address)}>
 													<Duplicate size={20} />
 												</button>
+												{/* <CopyCheck text={wallet.address} /> */}
 												<A href={wallet.addressExplorerURL}>
 													<ExternalLink size={20} />
 												</A>
 											</div>
 										</div>
 										<p className="mt-3 text-xs font-normal">
-											{token} {i18n.balance} : {Math.floor(+wallet.balance * 10000) / 10000 || '...'}
+											{token} {i18n.balance} : {Number.isNaN(roundedBalance) ? '...' : roundedBalance}
 										</p>
 									</>
 								)}
