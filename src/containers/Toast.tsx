@@ -29,7 +29,7 @@ const Toast = ({ setState, toast }: Props) => {
 		: ReactDOM.createPortal(
 				<div className="fixed z-50 top-5 w-full pointer-events-none xy">
 					<div
-						className={`bg-skin-toast shadow-skin-base relative px-8 py-5 rounded-sm overflow-hidden transition-transform duration-300 ${
+						className={`pointer-events-auto bg-skin-toast shadow-skin-base relative px-8 py-5 rounded-sm overflow-hidden transition-transform duration-300 ${
 							visible ? 'scale-1' : 'scale-0'
 						}`}
 					>

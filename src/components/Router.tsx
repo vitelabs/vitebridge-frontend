@@ -11,11 +11,11 @@ import { metaMaskIsSupported } from '../utils/wallet';
 
 type Props = State;
 
-const Router = ({ setState, vbInstance, networkType }: Props) => {
+const Router = ({ setState, vcInstance, networkType }: Props) => {
 	useEffect(() => {
-		if (vbInstance) {
-			vbInstance.on('disconnect', () => {
-				setState({ vbInstance: undefined });
+		if (vcInstance) {
+			vcInstance.on('disconnect', () => {
+				setState({ vcInstance: undefined });
 			});
 		}
 
@@ -26,11 +26,11 @@ const Router = ({ setState, vbInstance, networkType }: Props) => {
 				setState({ metamaskAddress: accounts[0] });
 			});
 		}
-	}, [setState, vbInstance]);
+	}, [setState, vcInstance]);
 
 	const updateViteBalanceAndTokens = useCallback(() => {
-		if (vbInstance?.accounts[0]) {
-			getBalanceInfo(vbInstance.accounts[0])
+		if (vcInstance?.accounts[0]) {
+			getBalanceInfo(vcInstance.accounts[0])
 				// @ts-ignore
 				.then((res: { balance: { balanceInfoMap: object } }) => {
 					if (res.balance.balanceInfoMap) {
@@ -42,28 +42,25 @@ const Router = ({ setState, vbInstance, networkType }: Props) => {
 							tokenUpdates[tti] = tokenInfo;
 						});
 						setState({ balances: balanceUpdates, tokens: tokenUpdates }, { deepMerge: true });
-						console.log('balanceUpdates:', balanceUpdates);
 					}
 				})
 				.catch((e) => {
 					console.log(e);
-					setState({ toast: e.toString() });
+					setState({ toast: e.toString(), vcInstance: null });
 					// Sometimes on page load, this will catch with
 					// Error: CONNECTION ERROR: Couldn't connect to node wss://buidl.vite.net/gvite/ws.
-					// TODO: What's the appropriate response?
-					setTimeout(() => updateViteBalanceAndTokens(), 1000);
 				});
 		}
-	}, [setState, vbInstance, networkType]);
+	}, [setState, vcInstance, networkType]);
 
 	useEffect(() => {
 		updateViteBalanceAndTokens();
-	}, [vbInstance]); // eslint-disable-line
+	}, [vcInstance]); // eslint-disable-line
 
 	useEffect(() => {
-		if (vbInstance) {
+		if (vcInstance) {
 			// updateViteBalanceAndTokens();
-			subscribe('newAccountBlocksByAddr', vbInstance.accounts[0])
+			subscribe('newAccountBlocksByAddr', vcInstance.accounts[0])
 				.then((event: any) => {
 					event.on((result: NewAccountBlock) => {
 						// NOTE: seems like a hack, I don't even need the block info
@@ -74,7 +71,7 @@ const Router = ({ setState, vbInstance, networkType }: Props) => {
 					console.warn(err);
 				});
 		}
-	}, [setState, vbInstance, updateViteBalanceAndTokens]);
+	}, [setState, vcInstance, updateViteBalanceAndTokens]);
 
 	return (
 		<BrowserRouter>
@@ -90,4 +87,4 @@ const Router = ({ setState, vbInstance, networkType }: Props) => {
 	);
 };
 
-export default connect('vbInstance, balances, tokens, networkType')(Router);
+export default connect('vcInstance, balances, tokens, networkType')(Router);

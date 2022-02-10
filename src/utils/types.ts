@@ -14,7 +14,7 @@ export type State = {
 	networkType: NetworkTypes;
 	language: string;
 	i18n: { [key: string]: string };
-	vbInstance: VB | null;
+	vcInstance: VB | null;
 	metamaskAddress: string;
 	balances: {
 		[network in Networks]: {

@@ -1,3 +1,14 @@
+// https://chainlist.org/
+export const chainIds = {
+	// 'Ethereum Mainnet': '0x1',
+	// 'Ropsten Testnet': '3', // for Ethereum
+	// 'BSC Mainnet': '56',
+	'BSC Testnet': '0x61', // Testnet(ChainID 0x61, 97 in decimal) https://docs.binance.org/smart-chain/developer/rpc.html
+};
+
+export const bnbERC20Address = '0x84AEEa373eF0aCd04f94B15Aa36F4475A0ac6457';
+export const viteTokenId = 'tti_5649544520544f4b454e6e40';
+
 // https://raw.githubusercontent.com/vitelabs/vite-asset-bridge/master/meta.json
 export const viteBridgeAssets = {
 	tokens: [

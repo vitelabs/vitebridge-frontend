@@ -17,7 +17,7 @@ const App = () => {
 				networkType: localStorage.network || 'testnet',
 				language: localStorage.language || 'en',
 				metamaskAddress: await getMetaMaskAccount(),
-				vbInstance: getValidVBSession() ? initVB() : null,
+				vcInstance: getValidVBSession() ? initVB() : null,
 				tokens: {},
 			};
 			initialStateSet(state);

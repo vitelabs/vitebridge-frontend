@@ -30,3 +30,5 @@ export const toSmallestUnit = (num: string, decimals = 0) => {
 		'0'.repeat(decimals - decimalPlaces)
 	);
 };
+
+export const roundDownTo6Decimals = (balance: string) => Math.floor(+balance * 1000000) / 1000000 + '';

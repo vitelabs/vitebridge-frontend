@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { wallet } from '@vite/vitejs';
 import { ethers, Contract, BigNumber } from 'ethers';
 import Picker from '../components/Picker';
-import { viteBridgeAssets } from '../utils/constants';
+import { bnbERC20Address, chainIds, viteBridgeAssets, viteTokenId } from '../utils/constants';
 import { connect } from '../utils/global-context';
 import { useTitle } from '../utils/hooks';
 import { BridgeTransaction, State } from '../utils/types';
@@ -10,7 +10,13 @@ import transImageSrc from '../assets/trans.png';
 import vbConfirmImageSrc from '../assets/vb_confirm.png';
 import vbConfirmDarkImageSrc from '../assets/vb_confirm.dark.png';
 import ConnectWalletButton from '../containers/ConnectWalletButton';
-import { copyToClipboardAsync, shortenAddress, shortenHash, toSmallestUnit } from '../utils/strings';
+import {
+	copyToClipboardAsync,
+	roundDownTo6Decimals,
+	shortenAddress,
+	shortenHash,
+	toSmallestUnit,
+} from '../utils/strings';
 import NumericalInput from '../components/NumericalInput';
 import TextInput from '../components/TextInput';
 import IconCircle from '../components/IconCircle';
@@ -28,14 +34,15 @@ import Check from '../assets/Check';
 import PendingDots from '../components/PendingDots';
 import { getBridgeTx } from '../utils/services/conversion';
 import { metaMaskIsSupported } from '../utils/wallet';
-// import CopyCheck from '../components/CopyCheck';
 import Duplicate from '../assets/Duplicate';
 
 const sleep = (seconds = 0): Promise<void> => new Promise((res) => setTimeout(() => res(), seconds));
 
 type Props = State;
 
-const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, networkType }: Props) => {
+let bridgeTxStatusModalOpen = false;
+
+const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, networkType }: Props) => {
 	useTitle('');
 	const [assetIndex, assetIndexSet] = useState(0);
 	const [confirmingBridgeTx, confirmingBridgeTxSet] = useState(false);
@@ -45,13 +52,12 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 	const [toNetworkIndex, toNetworkIndexSet] = useState(1);
 	const [destinationAddress, destinationAddressSet] = useState('');
 	const assetOptions = viteBridgeAssets.tokens.map(({ token, icon }) => ({ icon, label: token }));
-	const [amount, amountSet] = useState('');
+	const [amount, amountSet] = useState('0.1');
 	const [agreesToTerms, agreesToTermsSet] = useState(false);
-	const [fromNetworkConfirmations, fromNetworkConfirmationsSet] = useState(0);
-	const [toNetworkConfirmations, toNetworkConfirmationsSet] = useState(0);
-	const [fromNetworkReceiveHash, fromNetworkReceiveHashSet] = useState('');
-	const [toNetworkSendHash, toNetworkSendHashSet] = useState('');
+	const [bridgeTransaction, bridgeTransactionSet] = useState<BridgeTransaction | null>(null);
 	const [walletPromptLoading, walletPromptLoadingSet] = useState(false);
+	// @ts-ignore
+	const [metaMaskChainId, metaMaskChainIdSet] = useState(window?.ethereum.chainId);
 
 	const asset = useMemo(() => viteBridgeAssets.tokens[assetIndex], [assetIndex]);
 	// TODO: eventually there will be more than 1 channel so `channels[0]` will have to be replaced
@@ -66,23 +72,13 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 	);
 	const channelFrom = useMemo(() => channelOptions[fromNetworkIndex], [channelOptions, fromNetworkIndex]);
 	const fromAddress = useMemo(
-		() => (channelFrom.network === 'VITE' ? vbInstance?.accounts?.[0] : metamaskAddress) || '',
-		[channelFrom.network, vbInstance, metamaskAddress]
+		() => (channelFrom.network === 'VITE' ? vcInstance?.accounts?.[0] : metamaskAddress) || '',
+		[channelFrom.network, vcInstance, metamaskAddress]
 	);
 	const channelContractAddress = useMemo(() => channelFrom.contract, [channelFrom]);
 	const channelTo = useMemo(() => channelOptions[toNetworkIndex], [channelOptions, toNetworkIndex]);
 	const minAmount = useMemo(() => +(channelFrom?.min || 0), [channelFrom]);
 	const maxAmount = useMemo(() => +(channelFrom?.max || 0), [channelFrom]);
-	const assetBalance = useMemo(() => {
-		if (channelFrom && balances) {
-			if (balances?.vite?.[networkType] && channelFrom.network === 'VITE') {
-				return balances.vite[networkType][channelFrom.tokenId!];
-			} else if (balances?.bsc?.[networkType] && channelFrom.network === 'BSC') {
-				return balances.bsc[networkType][channelFrom.erc20!];
-			}
-		}
-		return '...';
-	}, [balances, networkType, channelFrom]);
 
 	const fromWallet = useMemo(
 		() => (channelFrom.network === 'VITE' ? 'Vite Wallet' : 'MetaMask'),
@@ -90,51 +86,71 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 	);
 
 	useEffect(() => {
+		// @ts-ignore
+		window.ethereum.on('chainChanged', (chainId: string) => {
+			metaMaskChainIdSet(chainId);
+		});
+	}, []);
+
+	const metaMaskNetworkMatchesFromNetwork = useMemo(
+		// @ts-ignore
+		() => metaMaskChainId === chainIds[channelFrom.desc],
+		[metaMaskChainId, channelFrom.desc]
+	);
+
+	const assetBalance = useMemo(() => {
+		if (!metaMaskNetworkMatchesFromNetwork && fromWallet === 'MetaMask') {
+			return '0';
+		}
+		if (channelFrom && balances) {
+			if (balances?.vite?.[networkType] && channelFrom.network === 'VITE') {
+				return roundDownTo6Decimals(balances.vite[networkType][channelFrom.tokenId!]);
+			} else if (balances?.bsc?.[networkType] && channelFrom.network === 'BSC') {
+				return roundDownTo6Decimals(balances.bsc[networkType][channelFrom.erc20!]);
+			}
+		}
+		return '...';
+	}, [fromWallet, metaMaskNetworkMatchesFromNetwork, balances, networkType, channelFrom]);
+
+	useEffect(() => {
 		if (channelTo.network === 'VITE') {
-			destinationAddressSet(vbInstance?.accounts[0] || '');
+			destinationAddressSet(vcInstance?.accounts[0] || '');
 		} else {
 			destinationAddressSet(metamaskAddress || '');
 		}
-	}, [channelTo.network, vbInstance, metamaskAddress]);
+	}, [channelTo.network, vcInstance, metamaskAddress]);
 
 	const fromWalletConnected = useMemo(() => {
 		if (fromWallet === 'Vite Wallet') {
-			return !!vbInstance;
+			return !!vcInstance;
 		} else {
 			return !!metamaskAddress;
 		}
-	}, [fromWallet, vbInstance, metamaskAddress]);
+	}, [fromWallet, vcInstance, metamaskAddress]);
 
 	const progressPercentage = useMemo(() => {
 		let stepsCompleted = 0;
 		if (fromWalletConnected) {
 			stepsCompleted++;
 		}
-		if (fromNetworkReceiveHash) {
+		if (bridgeTransaction?.fromHash) {
 			stepsCompleted++;
 		}
 		if (
-			fromNetworkConfirmations >= channelFrom.confirmedThreshold &&
-			toNetworkConfirmations >= channelTo.confirmedThreshold
+			(bridgeTransaction?.fromHashConfirmationNums || 0) >= channelFrom.confirmedThreshold &&
+			(bridgeTransaction?.toHashConfirmationNums || 0) >= channelTo.confirmedThreshold
 		) {
 			stepsCompleted++;
 		}
 		return (stepsCompleted / 3) * 100;
-	}, [
-		fromWalletConnected,
-		channelFrom.confirmedThreshold,
-		channelTo.confirmedThreshold,
-		fromNetworkConfirmations,
-		fromNetworkReceiveHash,
-		toNetworkConfirmations,
-	]);
+	}, [fromWalletConnected, channelFrom.confirmedThreshold, channelTo.confirmedThreshold, bridgeTransaction]);
 
 	const provider = useMemo(() => {
 		if (metaMaskIsSupported()) {
 			// @ts-ignore
 			return new ethers.providers.Web3Provider(window.ethereum);
 		}
-	}, []);
+	}, [metaMaskChainId]); // eslint-disable-line
 
 	const erc20Contract = useMemo(() => {
 		if (channelFrom.erc20 && provider) {
@@ -143,28 +159,53 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 	}, [channelFrom.erc20, provider]);
 
 	useEffect(() => {
-		if (erc20Contract && metamaskAddress) {
-			erc20Contract?.balanceOf(metamaskAddress).then((data: BigNumber) => {
-				if (channelFrom.erc20 && !balances?.bsc?.[networkType]?.[channelFrom.erc20]) {
-					setState(
-						{ balances: { bsc: { [networkType]: { [channelFrom.erc20]: ethers.utils.formatUnits(data) } } } },
-						{ deepMerge: true }
-					);
-				}
-			});
+		if (
+			networkType === 'testnet' &&
+			channelFrom.desc === 'BSC Testnet' &&
+			erc20Contract &&
+			metamaskAddress &&
+			metaMaskNetworkMatchesFromNetwork
+		) {
+			erc20Contract
+				?.balanceOf(metamaskAddress)
+				.then((data: BigNumber) => {
+					if (channelFrom.erc20 && !balances?.bsc?.[networkType]?.[channelFrom.erc20]) {
+						setState(
+							{ balances: { bsc: { [networkType]: { [channelFrom.erc20]: ethers.utils.formatUnits(data) } } } },
+							{ deepMerge: true }
+						);
+					}
+				})
+				.catch((e: any) => {
+					console.log('e:', e);
+				});
 		}
-	}, [erc20Contract, metamaskAddress, setState, networkType, channelFrom.erc20, balances?.bsc]);
+	}, [
+		channelFrom.desc,
+		metaMaskNetworkMatchesFromNetwork,
+		erc20Contract,
+		metamaskAddress,
+		setState,
+		networkType,
+		channelFrom.erc20,
+		balances?.bsc,
+	]);
 
 	useEffect(() => {
-		if (provider && metamaskAddress && networkType && !balances?.bsc?.[networkType]?.bnb) {
-			provider.getBalance(metamaskAddress).then((data) => {
-				setState(
-					{ balances: { bsc: { [networkType]: { bnb: ethers.utils.formatEther(data) } } } },
-					{ deepMerge: true }
-				);
-			});
+		if (provider && metamaskAddress && networkType && channelFrom.network === 'BSC') {
+			provider
+				.getBalance(metamaskAddress)
+				.then((data) => {
+					setState(
+						{ balances: { bsc: { [networkType]: { [bnbERC20Address]: ethers.utils.formatEther(data) } } } },
+						{ deepMerge: true }
+					);
+				})
+				.catch((e: any) => {
+					setState({ toast: String(e) });
+				});
 		}
-	}, [provider, metamaskAddress, setState, networkType, balances?.bsc]);
+	}, [metaMaskChainId, provider, metamaskAddress, channelFrom.network, networkType]); // eslint-disable-line
 
 	const amountInSmallestUnit = useMemo(
 		() => toSmallestUnit(amount, channelFrom.decimals),
@@ -178,13 +219,58 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 		[setState, i18n]
 	);
 
-	const startBridgeTransaction = useCallback(async () => {
-		fromNetworkConfirmationsSet(0);
-		toNetworkConfirmationsSet(0);
-		fromNetworkReceiveHashSet('');
-		toNetworkSendHashSet('');
-		walletPromptLoadingSet(true);
+	const checkIfMetaMaskNeedsToChangeNetwork = useCallback(() => {
+		if (fromWallet === 'MetaMask') {
+			if (channelFrom.network === 'BSC') {
+				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
+					setState({ toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscMainnet });
+					return true;
+				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
+					setState({ toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscTestnet });
+					return true;
+				}
+			}
+			// TODO: ETH
+		}
+		return false;
+	}, [fromWallet, setState, channelFrom.network, networkType, metaMaskNetworkMatchesFromNetwork, i18n]);
 
+	const openBridgeConfirmationModal = useCallback(async () => {
+		if (checkIfMetaMaskNeedsToChangeNetwork()) {
+			return;
+		}
+
+		const num = +amount;
+		if (num < minAmount || num > maxAmount) {
+			return setState({ toast: i18n.illegalAmount });
+		}
+		if (
+			(channelTo.network === 'BSC' && !ethers.utils.isAddress(destinationAddress)) ||
+			(channelTo.network === 'VITE' && !wallet.isValidAddress(destinationAddress))
+		) {
+			return setState({ toast: i18n.illegalAddress });
+		}
+		confirmingBridgeTxSet(true);
+		agreesToTermsSet(false);
+		walletPromptLoadingSet(false);
+	}, [
+		checkIfMetaMaskNeedsToChangeNetwork,
+		amount,
+		channelTo.network,
+		destinationAddress,
+		i18n,
+		maxAmount,
+		minAmount,
+		setState,
+	]);
+
+	const startBridgeTransaction = useCallback(async () => {
+		if (checkIfMetaMaskNeedsToChangeNetwork()) {
+			return;
+		}
+
+		bridgeTransactionSet(null);
+		walletPromptLoadingSet(true);
 		try {
 			let inputId = '';
 			if (channelFrom.network === 'BSC' && erc20Contract) {
@@ -209,15 +295,16 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 				confirmingBridgeTxSet(false);
 				confirmingViteConnectSet(false);
 				transactionConfirmationStatusOpenSet(true);
+				bridgeTxStatusModalOpen = true;
 				walletPromptLoadingSet(false);
 				while (!inputId) {
 					await sleep(5000);
 					const id = await erc20Channel.prevInputId();
 					if (id !== prevId) inputId = id;
 				}
-			} else if (channelFrom.network === 'VITE' && vbInstance) {
+			} else if (channelFrom.network === 'VITE' && vcInstance) {
 				const channelClient = new ChannelVite({
-					vbInstance,
+					vcInstance,
 					address: channelContractAddress,
 					tokenId: channelFrom.tokenId!,
 				});
@@ -227,6 +314,7 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 				confirmingBridgeTxSet(false);
 				confirmingViteConnectSet(false);
 				transactionConfirmationStatusOpenSet(true);
+				bridgeTxStatusModalOpen = true;
 				walletPromptLoadingSet(false);
 				while (!inputId) {
 					await sleep(5000);
@@ -237,21 +325,20 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 			let bridgeTx: BridgeTransaction;
 			let fromConfirmed = false;
 			let toConfirmed = false;
-			while (!fromConfirmed || !toConfirmed) {
+			while ((!fromConfirmed || !toConfirmed) && bridgeTxStatusModalOpen) {
 				await sleep(5000);
 				bridgeTx = await getBridgeTx(networkType, { from: fromAddress, to: destinationAddress, id: inputId });
 				if (bridgeTx) {
-					fromNetworkReceiveHashSet(bridgeTx.fromHash);
-					toNetworkSendHashSet(bridgeTx.toHash);
-					fromNetworkConfirmationsSet(bridgeTx.fromHashConfirmationNums || 0);
+					bridgeTransactionSet(bridgeTx);
 					fromConfirmed = bridgeTx.fromHashConfirmationNums >= channelFrom.confirmedThreshold;
-					toNetworkConfirmationsSet(bridgeTx.toHashConfirmationNums || 0);
 					toConfirmed = bridgeTx.toHashConfirmationNums >= channelTo.confirmedThreshold;
 				}
 			}
-			// QUESTION: Isn't the transaction technically completed when bridgeTx has a `toHash` with sufficient confirmations?
-			// I've noticed the BSC network reaches its threshold a lot faster than Vite.
-			setState({ toast: i18n.bridgingTransactionComplete });
+			if (bridgeTxStatusModalOpen) {
+				// QUESTION: Isn't the transaction technically completed when bridgeTx has a `toHash` with sufficient confirmations?
+				// I've noticed the BSC network reaches its threshold a lot faster than Vite.
+				setState({ toast: i18n.bridgingTransactionComplete });
+			}
 		} catch (e: any) {
 			console.log('e:', e);
 			walletPromptLoadingSet(false);
@@ -263,6 +350,7 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 			}
 		}
 	}, [
+		i18n,
 		networkType,
 		amountInSmallestUnit,
 		channelContractAddress,
@@ -273,10 +361,9 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 		destinationAddress,
 		erc20Contract,
 		fromAddress,
-		i18n.bridgingTransactionComplete,
-		i18n.userCanceled,
 		setState,
-		vbInstance,
+		vcInstance,
+		checkIfMetaMaskNeedsToChangeNetwork,
 	]);
 
 	return (
@@ -349,7 +436,7 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 								<div className="flex justify-between">
 									<p className="mb-3 text-xs font-semibold">{i18n.amount}</p>
 									<p className="mb-3 text-xs font-normal">
-										{i18n.balance}: {assetBalance}
+										{i18n.balance} : {assetBalance}
 									</p>
 								</div>
 								<div className="border border-skin-muted dark:border-none bg-skin-input text-sm flex items-center rounded-sm">
@@ -374,24 +461,7 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 									className="border border-skin-muted dark:border-none bg-skin-input text-sm flex-1 pl-3 py-1 rounded-sm w-full"
 								/>
 							</div>
-							<button
-								className="blue-rect"
-								onClick={async () => {
-									const num = +amount;
-									if (num < minAmount || num > maxAmount) {
-										return setState({ toast: i18n.illegalAmount });
-									}
-									if (
-										(channelTo.network === 'BSC' && !ethers.utils.isAddress(destinationAddress)) ||
-										(channelTo.network === 'VITE' && !wallet.isValidAddress(destinationAddress))
-									) {
-										return setState({ toast: i18n.illegalAddress });
-									}
-									confirmingBridgeTxSet(true);
-									agreesToTermsSet(false);
-									walletPromptLoadingSet(false);
-								}}
-							>
+							<button className="blue-rect" onClick={openBridgeConfirmationModal}>
 								{i18n.next}
 							</button>
 							<div className="bg-skin-reminder font-normal px-5 py-4 text-xs space-y-2">
@@ -468,27 +538,26 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 							icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
 						},
 					].map(({ icon, platform, token, desc, walletType }) => {
-						const viteTokenId = 'tti_5649544520544f4b454e6e40';
 						const wallet = {
 							'Vite Wallet': {
-								address: vbInstance?.accounts[0],
-								// `vbInstance?.killSession` doesn't work by itself for some reason
-								logOut: vbInstance?.killSession && (() => vbInstance.killSession()),
+								address: vcInstance?.accounts[0],
+								// `vcInstance?.killSession` doesn't work by itself for some reason
+								logOut: vcInstance?.killSession && (() => vcInstance.killSession()),
 								balance: balances?.vite?.[networkType]?.[viteTokenId],
 								addressExplorerURL: `https://${networkType === 'testnet' ? 'test.' : ''}vitescan.io/address/${
-									vbInstance?.accounts[0]
+									vcInstance?.accounts[0]
 								}`,
 							},
 							MetaMask: {
 								address: metamaskAddress,
-								balance: balances?.bsc?.[networkType]?.bnb,
+								balance: balances?.bsc?.[networkType]?.[bnbERC20Address],
 								addressExplorerURL: `https://${
 									networkType === 'testnet' ? 'testnet.' : ''
 								}bscscan.com/address/${metamaskAddress}`,
 							},
 						}[walletType];
 						const connected = !!wallet?.address;
-						const roundedBalance = connected ? Math.floor(+wallet.balance * 10000) / 10000 : null;
+						const roundedBalance = connected ? roundDownTo6Decimals(wallet.balance) : null;
 
 						return (
 							<div
@@ -536,7 +605,6 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 												<button onClick={() => copyWithToast(wallet.address)}>
 													<Duplicate size={20} />
 												</button>
-												{/* <CopyCheck text={wallet.address} /> */}
 												<A href={wallet.addressExplorerURL}>
 													<ExternalLink size={20} />
 												</A>
@@ -624,25 +692,28 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 			{transactionConfirmationStatusOpen && (
 				<Modal
 					header={i18n.transactionConfirmationStatus}
-					onClose={() => transactionConfirmationStatusOpenSet(false)}
+					onClose={() => {
+						transactionConfirmationStatusOpenSet(false);
+						bridgeTxStatusModalOpen = false;
+					}}
 					className="w-full max-w-md bg-skin-middleground"
 				>
 					<div className="xy p-6 gap-5">
 						<div className="fy">
 							<div
 								className={`z-10 xy h-5 w-5 rounded-full bg-skin-middleground shadow-skin-base ${
-									fromNetworkReceiveHash ? 'bg-skin-highlight' : 'border-[3px] border-skin-lowlight'
+									bridgeTransaction?.fromHash ? 'bg-skin-highlight' : 'border-[3px] border-skin-lowlight'
 								}`}
 							>
-								{fromNetworkReceiveHash && <Check size={16} />}
+								{bridgeTransaction?.fromHash && <Check size={16} />}
 							</div>
 							<div className="w-0.5 h-24 -my-2 bg-skin-lowlight" />
 							<div
 								className={`xy h-5 w-5 rounded-full bg-skin-middleground shadow-skin-base ${
-									toNetworkSendHash ? 'bg-skin-highlight' : 'border-[3px] border-skin-lowlight'
+									bridgeTransaction?.toHash ? 'bg-skin-highlight' : 'border-[3px] border-skin-lowlight'
 								}`}
 							>
-								{toNetworkSendHash && <Check size={16} />}
+								{bridgeTransaction?.toHash && <Check size={16} />}
 							</div>
 						</div>
 						<div className="flex-1 space-y-6">
@@ -651,15 +722,15 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 									channelOptions[fromNetworkIndex].icon,
 									channelFrom,
 									fromAddress,
-									fromNetworkReceiveHash,
-									fromNetworkConfirmations,
+									bridgeTransaction?.fromHash,
+									bridgeTransaction?.fromHashConfirmationNums,
 								],
 								[
 									channelOptions[toNetworkIndex].icon,
 									channelTo,
 									destinationAddress,
-									toNetworkSendHash,
-									toNetworkConfirmations,
+									bridgeTransaction?.toHash,
+									bridgeTransaction?.toHashConfirmationNums,
 								],
 							].map(([imgSrc, channel, address, hash, confirmations], i) => (
 								<div className="fx shadow-skin-base p-4" key={i}>
@@ -689,7 +760,7 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 											<p>
 												{confirmations >= channel.confirmedThreshold
 													? i18n.confirmed
-													: `(${confirmations} / ${channel.confirmedThreshold})`}
+													: `(${confirmations || 0} / ${channel.confirmedThreshold})`}
 											</p>
 										</div>
 									</div>
@@ -703,4 +774,4 @@ const Home = ({ setState, i18n, metamaskAddress, vbInstance, balances, tokens, n
 	);
 };
 
-export default connect('i18n, metamaskAddress, vbInstance, balances, tokens, networkType')(Home);
+export default connect('i18n, metamaskAddress, vcInstance, balances, tokens, networkType')(Home);

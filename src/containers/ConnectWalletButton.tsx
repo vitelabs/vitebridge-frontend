@@ -12,7 +12,7 @@ type Props = State & {
 	className?: string;
 };
 
-const ConnectWalletButton = ({ setState, i18n, children, walletType, className, vbInstance }: Props) => {
+const ConnectWalletButton = ({ setState, i18n, children, walletType, className, vcInstance }: Props) => {
 	const [connectURI, connectURISet] = useState('');
 
 	return (
@@ -21,10 +21,10 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 				className={className}
 				onClick={async () => {
 					if (walletType === 'Vite Wallet') {
-						vbInstance = initVB();
-						connectURISet(await vbInstance.createSession());
-						vbInstance.on('connect', () => {
-							setState({ vbInstance });
+						vcInstance = initVB();
+						connectURISet(await vcInstance.createSession());
+						vcInstance.on('connect', () => {
+							setState({ vcInstance });
 						});
 					} else {
 						if (metaMaskIsSupported()) {
@@ -51,4 +51,4 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 	);
 };
 
-export default connect('i18n, vbInstance')(ConnectWalletButton);
+export default connect('i18n, vcInstance')(ConnectWalletButton);
