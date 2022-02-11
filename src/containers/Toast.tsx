@@ -14,11 +14,11 @@ const Toast = ({ setState, toast }: Props) => {
 		clearTimeout(visibleTimer);
 		clearTimeout(closeTimer);
 		if (toast) {
-			visibleSet(true);
+			setTimeout(() => visibleSet(true), 0); // setTimeout gives the component time to mount before animating - else the beginning scale animation is cut off
 			visibleTimer = setTimeout(() => {
 				visibleSet(false);
 				closeTimer = setTimeout(() => setState({ toast: '' }), 300);
-			}, Math.max(2000, toast.split(' ').length * 1500)); // 1.5 seconds per word
+			}, 3000);
 		}
 	}, [setState, toast]);
 

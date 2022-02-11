@@ -37,10 +37,9 @@ import { metaMaskIsSupported } from '../utils/wallet';
 import Duplicate from '../assets/Duplicate';
 
 const sleep = (seconds = 0): Promise<void> => new Promise((res) => setTimeout(() => res(), seconds));
+let bridgeTxStatusModalOpen = false;
 
 type Props = State;
-
-let bridgeTxStatusModalOpen = false;
 
 const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, networkType }: Props) => {
 	useTitle('');
@@ -52,12 +51,12 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 	const [toNetworkIndex, toNetworkIndexSet] = useState(1);
 	const [destinationAddress, destinationAddressSet] = useState('');
 	const assetOptions = viteBridgeAssets.tokens.map(({ token, icon }) => ({ icon, label: token }));
-	const [amount, amountSet] = useState('0.1');
+	const [amount, amountSet] = useState('');
 	const [agreesToTerms, agreesToTermsSet] = useState(false);
 	const [bridgeTransaction, bridgeTransactionSet] = useState<BridgeTransaction | null>(null);
 	const [walletPromptLoading, walletPromptLoadingSet] = useState(false);
 	// @ts-ignore
-	const [metaMaskChainId, metaMaskChainIdSet] = useState(window?.ethereum.chainId);
+	const [metaMaskChainId, metaMaskChainIdSet] = useState(metaMaskIsSupported() ? window?.ethereum?.chainId : '');
 
 	const asset = useMemo(() => viteBridgeAssets.tokens[assetIndex], [assetIndex]);
 	// TODO: eventually there will be more than 1 channel so `channels[0]` will have to be replaced
@@ -86,10 +85,12 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 	);
 
 	useEffect(() => {
-		// @ts-ignore
-		window.ethereum.on('chainChanged', (chainId: string) => {
-			metaMaskChainIdSet(chainId);
-		});
+		if (metaMaskIsSupported()) {
+			// @ts-ignore
+			window.ethereum.on('chainChanged', (chainId: string) => {
+				metaMaskChainIdSet(chainId);
+			});
+		}
 	}, []);
 
 	const metaMaskNetworkMatchesFromNetwork = useMemo(
@@ -192,7 +193,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 	]);
 
 	useEffect(() => {
-		if (provider && metamaskAddress && networkType && channelFrom.network === 'BSC') {
+		if (provider && metamaskAddress && networkType) {
 			provider
 				.getBalance(metamaskAddress)
 				.then((data) => {
@@ -205,7 +206,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 					setState({ toast: String(e) });
 				});
 		}
-	}, [metaMaskChainId, provider, metamaskAddress, channelFrom.network, networkType]); // eslint-disable-line
+	}, [metaMaskChainId, provider, metamaskAddress, networkType]); // eslint-disable-line
 
 	const amountInSmallestUnit = useMemo(
 		() => toSmallestUnit(amount, channelFrom.decimals),
@@ -327,7 +328,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 			let toConfirmed = false;
 			while ((!fromConfirmed || !toConfirmed) && bridgeTxStatusModalOpen) {
 				await sleep(5000);
-				bridgeTx = await getBridgeTx(networkType, { from: fromAddress, to: destinationAddress, id: inputId });
+				bridgeTx = await getBridgeTx(networkType, { id: inputId });
 				if (bridgeTx) {
 					bridgeTransactionSet(bridgeTx);
 					fromConfirmed = bridgeTx.fromHashConfirmationNums >= channelFrom.confirmedThreshold;
@@ -368,16 +369,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 
 	return (
 		<div className="m-5 xy flex-col lg:flex-row lg:items-start lg:justify-center">
-			<div className="flex-1 hidden lg:flex flex-col">
-				{/* <div className="text-sm text-skin-highlight mt-20 ml-20 flex flex-col gap-7">
-					<A href="https://medium.com/vitelabs/vitebridge-0-1-testnet-tutorial-1f3382f389f7">
-						ViteBridge 0.1 Testnet Tutorial
-					</A>
-					<A href="https://medium.com/vitelabs/vitebridge-0-1-bug-bounty-program-109ce87bda2e">
-						ViteBridge 0.1 Bug Bounty Program
-					</A>
-				</div> */}
-			</div>
+			<div className="flex-1 hidden lg:flex flex-col"></div>
 			<div className="w-full flex flex-col min-h-[48rem] max-w-2xl py-10 rounded-sm shadow-skin-base bg-skin-middleground">
 				<div className="px-10 flex-1">
 					<p className="text-lg mb-5 font-semibold">{i18n.chooseAsset}</p>
@@ -557,7 +549,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 							},
 						}[walletType];
 						const connected = !!wallet?.address;
-						const roundedBalance = connected ? roundDownTo6Decimals(wallet.balance) : null;
+						const roundedBalance = connected && wallet.balance ? roundDownTo6Decimals(wallet.balance) : '';
 
 						return (
 							<div
@@ -611,7 +603,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 											</div>
 										</div>
 										<p className="mt-3 text-xs font-normal">
-											{token} {i18n.balance} : {Number.isNaN(roundedBalance) ? '...' : roundedBalance}
+											{token} {i18n.balance} : {roundedBalance ? roundedBalance : '...'}
 										</p>
 									</>
 								)}

@@ -28,7 +28,14 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 						});
 					} else {
 						if (metaMaskIsSupported()) {
-							setState({ metamaskAddress: await promptMetaMaskAccount() });
+							promptMetaMaskAccount()
+								.then((v) => {
+									setState({ metamaskAddress: v });
+								})
+								.catch((e) => {
+									console.log('e:', e);
+									setState({ toast: e.message });
+								});
 						} else {
 							setState({ toast: i18n.metaMaskNotDetected });
 						}

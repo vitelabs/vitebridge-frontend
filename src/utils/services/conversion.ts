@@ -6,10 +6,7 @@ export const toURLParams = (obj: { [key: string]: any }) =>
 		.map(([key, val]) => `${key}=${encodeURIComponent(val)}`)
 		.join('&');
 
-export const getBridgeTx = function (
-	networkType: NetworkTypes,
-	params: { from: string; to: string; id: string }
-): Promise<any> {
+export const getBridgeTx = function (networkType: NetworkTypes, params: { id: string }): Promise<any> {
 	return Promise.race([
 		new Promise((resolve) =>
 			fetch(
