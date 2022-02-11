@@ -31,7 +31,7 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 						to="/"
 						className={`relative text-sm font-semibold xy ${pathname === '/' ? 'active-tab' : 'text-skin-muted'}`}
 					>
-						Bridge
+						{i18n.bridge}
 					</A>
 					{/* <A
 						to="/history"
@@ -43,17 +43,17 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 					</A> */}
 					<A
 						href="https://medium.com/vitelabs/vitebridge-0-1-bug-bounty-program-109ce87bda2e"
-						className={`relative text-sm font-semibold xy`}
+						className={`relative text-sm font-semibold xy text-skin-muted`}
 					>
-						Bug Bounty
+						{i18n.bugBounty}
 					</A>
 					<A
 						href="https://medium.com/vitelabs/vitebridge-0-1-testnet-tutorial-1f3382f389f7"
-						className={`relative text-sm font-semibold xy`}
+						className={`relative text-sm font-semibold xy text-skin-muted`}
 					>
-						Tutorial
+						{i18n.tutorial}
 					</A>
-					<A href="https://t.me/vite_en" className={`relative text-sm font-semibold xy`}>
+					<A href="https://t.me/vite_en" className={`relative text-sm font-semibold xy text-skin-muted`}>
 						{i18n.help}
 					</A>
 				</div>
@@ -62,7 +62,7 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 						value={language!}
 						options={[
 							['en', 'English'],
-							['tr', 'Türkçe'],
+							// ['tr', 'Türkçe'],
 						]}
 						onUserInput={(v) => {
 							setState({ language: v });
@@ -75,7 +75,7 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 					<Select
 						value={networkType!}
 						options={[
-							['mainnet', 'Mainnet'],
+							// ['mainnet', 'Mainnet'],
 							['testnet', 'Testnet'],
 						]}
 						onUserInput={(v) => {

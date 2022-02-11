@@ -1,7 +1,5 @@
 {
 	"lang": "English",
-	"bridge": "Bridge",
-	"help": "Help",
 	"history": "History",
 	"chooseAsset": "Choose Asset",
 	"connect": "Connect",
@@ -44,6 +42,10 @@
 	"metaMaskNotDetected": "MetaMask not detected",
 	"switchTheNetworkInYourMetaMaskWalletToBscMainnet": "Switch the network in your MetaMask wallet to BSC Mainnet",
 	"switchTheNetworkInYourMetaMaskWalletToBscTestnet": "Switch the network in your MetaMask wallet to BSC Testnet",
+	"bridge": "Bridge",
+	"bugBounty": "Bug Bounty",
+	"tutorial": "Tutorial",
+	"help": "Help",
 	"test": "test",
 	"": ""
 }

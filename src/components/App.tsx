@@ -14,7 +14,7 @@ const App = () => {
 	useEffect(() => {
 		(async () => {
 			const state: Partial<State> = {
-				networkType: localStorage.network || 'testnet',
+				networkType: localStorage.networkType || 'testnet',
 				language: localStorage.language || 'en',
 				metamaskAddress: await getMetaMaskAccount(),
 				vcInstance: getValidVBSession() ? initVB() : null,
