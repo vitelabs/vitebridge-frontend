@@ -3,7 +3,7 @@ import { Buffer } from 'buffer/'; // note: the trailing slash is important!
 import _viteAbi from './channel.json';
 import offChainCode from './offChainCode';
 import { viteClient } from '../../vitescripts';
-import { VB } from '../../vb';
+import { VB } from '../../vc';
 
 export class ChannelVite {
 	viteProvider: typeof viteClient;

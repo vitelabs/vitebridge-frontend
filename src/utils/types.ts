@@ -1,5 +1,5 @@
 import { setStateType } from './global-context';
-import { VB } from './vb';
+import { VB } from './vc';
 
 export type Balance = {
 	[tokenId: string]: string;

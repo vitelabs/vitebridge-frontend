@@ -5,7 +5,7 @@ import Router from './Router';
 import { Provider } from '../utils/global-context';
 import { getMetaMaskAccount } from '../utils/wallet';
 import { useEffect, useState } from 'react';
-import { getValidVBSession, initVB } from '../utils/vb';
+import { getValidVBSession, initVB } from '../utils/vc';
 import { State } from '../utils/types';
 
 const App = () => {

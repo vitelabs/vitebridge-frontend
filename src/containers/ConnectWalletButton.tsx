@@ -3,7 +3,7 @@ import Modal from '../components/Modal';
 import QR from '../components/QR';
 import { connect } from '../utils/global-context';
 import { State } from '../utils/types';
-import { initVB } from '../utils/vb';
+import { initVB } from '../utils/vc';
 import { metaMaskIsSupported, promptMetaMaskAccount } from '../utils/wallet';
 
 type Props = State & {

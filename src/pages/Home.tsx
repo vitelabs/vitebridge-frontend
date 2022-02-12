@@ -648,8 +648,8 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 							<p className="text-sm font-normal">{i18n.theTransactionFeesAreSubjectToNetworkConditionsAndMayChange}</p>
 						</div>
 						<Checkbox checked={agreesToTerms} onUserInput={(b) => agreesToTermsSet(b)}>
-							{i18n.iHaveReadAndAgreeToThe} {/* // TODO: get terms link */}
-							<A href="TODO: " className="text-skin-highlight">
+							{i18n.iHaveReadAndAgreeToThe}
+							<A href="TODO: get terms link" className="text-skin-highlight">
 								{i18n.termsOfUse}.
 							</A>
 						</Checkbox>
