@@ -36,7 +36,7 @@ import { getBridgeTx } from '../utils/services/conversion';
 import { metaMaskIsSupported } from '../utils/wallet';
 import Duplicate from '../assets/Duplicate';
 
-const sleep = (seconds = 0): Promise<void> => new Promise((res) => setTimeout(() => res(), seconds));
+const sleep = (ms = 0): Promise<void> => new Promise((res) => setTimeout(() => res(), ms));
 let bridgeTxStatusModalOpen = false;
 
 type Props = State;
