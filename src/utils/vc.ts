@@ -2,7 +2,7 @@
 
 import Connector from '@vite/connector';
 
-const VCSessionKey = 'vcSession';
+export const VCSessionKey = 'vcSession';
 
 export class VB extends Connector {
 	constructor(opts, meta) {

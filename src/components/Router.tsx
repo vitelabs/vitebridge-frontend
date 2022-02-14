@@ -8,6 +8,7 @@ import { getBalanceInfo, subscribe } from '../utils/vitescripts';
 import Toast from '../containers/Toast';
 import { toBiggestUnit } from '../utils/strings';
 import { metaMaskIsSupported } from '../utils/wallet';
+import { VCSessionKey } from '../utils/vc';
 
 type Props = State;
 
@@ -47,6 +48,7 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 				.catch((e) => {
 					console.log(e);
 					setState({ toast: e.toString(), vcInstance: null });
+					localStorage.removeItem(VCSessionKey);
 					// Sometimes on page load, this will catch with
 					// Error: CONNECTION ERROR: Couldn't connect to node wss://buidl.vite.net/gvite/ws.
 				});
