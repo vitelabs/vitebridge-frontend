@@ -1,5 +1,5 @@
 import { setStateType } from './global-context';
-import { VB } from './vc';
+import { VC } from './vc';
 
 export type Balance = {
 	[tokenId: string]: string;
@@ -14,7 +14,7 @@ export type State = {
 	networkType: NetworkTypes;
 	language: string;
 	i18n: { [key: string]: string };
-	vcInstance: VB | null;
+	vcInstance: VC | null;
 	metamaskAddress: string;
 	balances: {
 		[network in Networks]: {

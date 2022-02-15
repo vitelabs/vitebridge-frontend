@@ -4,7 +4,7 @@ import Connector from '@vite/connector';
 
 export const VCSessionKey = 'vcSession';
 
-export class VB extends Connector {
+export class VC extends Connector {
 	constructor(opts, meta) {
 		super(opts, meta);
 		this.on('connect', (err, payload) => {
@@ -40,7 +40,7 @@ export class VB extends Connector {
 		return this.uri;
 	}
 
-	async sendVbTx(...args) {
+	async sendVcTx(...args) {
 		return new Promise((resolve, reject) => {
 			this.on('disconnect', () => {
 				// reject({ code: 11020, message: '链接断开' });
@@ -59,7 +59,7 @@ export class VB extends Connector {
 	}
 }
 
-export function getValidVBSession() {
+export function getValidVCSession() {
 	let sessionData = null;
 	let session = null;
 	try {
@@ -83,9 +83,9 @@ export function getValidVBSession() {
 	return session;
 }
 
-export function initVB(meta = null) {
-	const session = getValidVBSession();
-	return new VB(
+export function initVC(meta = null) {
+	const session = getValidVCSession();
+	return new VC(
 		{
 			session,
 			bridge: 'wss://biforst.vite.net',

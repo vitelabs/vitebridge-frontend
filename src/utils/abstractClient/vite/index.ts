@@ -3,18 +3,18 @@ import { Buffer } from 'buffer/'; // note: the trailing slash is important!
 import _viteAbi from './channel.json';
 import offChainCode from './offChainCode';
 import { viteClient } from '../../vitescripts';
-import { VB } from '../../vc';
+import { VC } from '../../vc';
 
 export class ChannelVite {
 	viteProvider: typeof viteClient;
 	viteChannelAddress: string;
 
-	vcInstance: VB;
+	vcInstance: VC;
 	viteChannelAbi: any[];
 	viteOffChainCode: any;
 	tokenId: string;
 
-	constructor(config: { vcInstance: VB; address: string; tokenId: string }) {
+	constructor(config: { vcInstance: VC; address: string; tokenId: string }) {
 		this.vcInstance = config.vcInstance;
 		this.viteChannelAbi = _viteAbi;
 		this.viteOffChainCode = Buffer.from(offChainCode, 'hex').toString('base64');
@@ -39,7 +39,7 @@ export class ChannelVite {
 			amount: value,
 		}).accountBlock;
 
-		return this.vcInstance.sendVbTx({
+		return this.vcInstance.sendVcTx({
 			block,
 			abi,
 		});

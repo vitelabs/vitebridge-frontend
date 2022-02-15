@@ -5,7 +5,7 @@ import Router from './Router';
 import { Provider } from '../utils/global-context';
 import { getMetaMaskAccount } from '../utils/wallet';
 import { useEffect, useState } from 'react';
-import { getValidVBSession, initVB } from '../utils/vc';
+import { getValidVCSession, initVC } from '../utils/vc';
 import { State } from '../utils/types';
 
 const App = () => {
@@ -17,7 +17,7 @@ const App = () => {
 				networkType: localStorage.networkType || 'testnet',
 				language: localStorage.language || 'en',
 				metamaskAddress: await getMetaMaskAccount(),
-				vcInstance: getValidVBSession() ? initVB() : null,
+				vcInstance: getValidVCSession() ? initVC() : null,
 				tokens: {},
 			};
 			initialStateSet(state);

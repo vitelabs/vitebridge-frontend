@@ -3,7 +3,7 @@ import Modal from '../components/Modal';
 import QR from '../components/QR';
 import { connect } from '../utils/global-context';
 import { State } from '../utils/types';
-import { initVB } from '../utils/vc';
+import { initVC } from '../utils/vc';
 import { metaMaskIsSupported, promptMetaMaskAccount } from '../utils/wallet';
 
 type Props = State & {
@@ -21,7 +21,7 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 				className={className}
 				onClick={async () => {
 					if (walletType === 'Vite Wallet') {
-						vcInstance = initVB();
+						vcInstance = initVC();
 						connectURISet(await vcInstance.createSession());
 						vcInstance.on('connect', () => {
 							setState({ vcInstance });
