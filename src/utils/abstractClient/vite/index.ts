@@ -1,4 +1,4 @@
-import { abi, accountBlock } from '@vite/vitejs';
+import { accountBlock } from '@vite/vitejs';
 import { Buffer } from 'buffer/'; // note: the trailing slash is important!
 import _viteAbi from './channel.json';
 import offChainCode from './offChainCode';
@@ -39,10 +39,7 @@ export class ChannelVite {
 			amount: value,
 		}).accountBlock;
 
-		return this.vcInstance.sendVcTx({
-			block,
-			abi,
-		});
+		return this.vcInstance.sendVcTx({ block });
 	}
 
 	async prevInputId() {
