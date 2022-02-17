@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { wallet } from '@vite/vitejs';
 import { ethers, Contract, BigNumber } from 'ethers';
 import Picker from '../components/Picker';
-import { bnbERC20Address, chainIds, viteBridgeAssets, viteTokenId } from '../utils/constants';
+import { chainIds, viteBridgeAssets, viteTokenId } from '../utils/constants';
 import { connect } from '../utils/global-context';
 import { useTitle } from '../utils/hooks';
 import { BridgeTransaction, State } from '../utils/types';
@@ -104,10 +104,14 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 			return '0';
 		}
 		if (channelFrom && balances) {
+			let balance;
 			if (balances?.vite?.[networkType] && channelFrom.network === 'VITE') {
-				return roundDownTo6Decimals(balances.vite[networkType][channelFrom.tokenId!]);
+				balance = balances.vite[networkType][channelFrom.tokenId!];
 			} else if (balances?.bsc?.[networkType] && channelFrom.network === 'BSC') {
-				return roundDownTo6Decimals(balances.bsc[networkType][channelFrom.erc20!]);
+				balance = balances.bsc[networkType][channelFrom.erc20!];
+			}
+			if (balance) {
+				return roundDownTo6Decimals(balance);
 			}
 		}
 		return '...';
@@ -198,7 +202,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 				.getBalance(metamaskAddress)
 				.then((data) => {
 					setState(
-						{ balances: { bsc: { [networkType]: { [bnbERC20Address]: ethers.utils.formatEther(data) } } } },
+						{ balances: { bsc: { [networkType]: { bnb: ethers.utils.formatEther(data) } } } },
 						{ deepMerge: true }
 					);
 				})
@@ -542,7 +546,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 							},
 							MetaMask: {
 								address: metamaskAddress,
-								balance: balances?.bsc?.[networkType]?.[bnbERC20Address],
+								balance: balances?.bsc?.[networkType]?.bnb,
 								addressExplorerURL: `https://${
 									networkType === 'testnet' ? 'testnet.' : ''
 								}bscscan.com/address/${metamaskAddress}`,
