@@ -53,7 +53,7 @@ const Modal = ({ header, noX, onClose = () => {}, children, className }: Props) 
 						>
 							<div className="bg-skin-modal-header text-sm px-7 h-12 xy justify-between">
 								<p className="text-white font-semibold">{header}</p>
-								<button className={noX ? 'b invisible' : 'x'} onClick={onClose} />
+								<button className={noX ? 'invisible' : 'x'} onClick={onClose} />
 							</div>
 							{children}
 						</div>

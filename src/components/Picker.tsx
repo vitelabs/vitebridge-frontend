@@ -25,7 +25,7 @@ const IconRow = ({ big, className, icon, label, onClick }: IconRowProps) => (
 	</div>
 );
 
-const Select = ({ big, selectedIndex, options, onPick }: Props) => {
+const Picker = ({ big, selectedIndex, options, onPick }: Props) => {
 	const ref = useRef<HTMLDivElement>(null);
 	useKeyPress('Escape', () => {
 		if (ref.current) {
@@ -84,4 +84,4 @@ const Select = ({ big, selectedIndex, options, onPick }: Props) => {
 	);
 };
 
-export default Select;
+export default Picker;
