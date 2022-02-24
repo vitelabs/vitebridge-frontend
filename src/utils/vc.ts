@@ -12,6 +12,7 @@ export class VC extends Connector {
 			this.setAccState(accounts);
 		});
 		this.on('disconnect', () => {
+			this.stopBizHeartBeat();  // stop heart beat when disconnected
 			localStorage.removeItem(VCSessionKey);
 		});
 		this.on('session_update', () => {
