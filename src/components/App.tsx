@@ -18,7 +18,6 @@ const App = () => {
 				language: localStorage.language || 'en',
 				metamaskAddress: await getMetaMaskAccount(),
 				vcInstance: getValidVCSession() ? initVC() : null,
-				tokens: {},
 			};
 			initialStateSet(state);
 		})();

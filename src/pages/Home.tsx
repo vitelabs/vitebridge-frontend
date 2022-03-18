@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { wallet } from '@vite/vitejs';
+import { wallet, constant } from '@vite/vitejs';
 import { ethers } from 'ethers';
 import Picker from '../components/Picker';
-import { chainIds, combos, viteBridgeAssets, viteTokenId } from '../utils/constants';
+import { chainIds, combos, viteBridgeAssets } from '../utils/constants';
 import { connect } from '../utils/global-context';
 import { useTitle } from '../utils/hooks';
 import { BridgeTransaction, State } from '../utils/types';
@@ -41,7 +41,7 @@ let bridgeTxStatusModalOpen = false;
 
 type Props = State;
 
-const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, networkType }: Props) => {
+const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkType }: Props) => {
 	useTitle('');
 	const [assetIndex, assetIndexSet] = useState(0);
 	const [confirmingBridgeTx, confirmingBridgeTxSet] = useState(false);
@@ -56,6 +56,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 	const [walletPromptLoading, walletPromptLoadingSet] = useState(false);
 	// @ts-ignore
 	const [metaMaskChainId, metaMaskChainIdSet] = useState(metaMaskIsSupported() ? window?.ethereum?.chainId : '');
+	const [metaMaskNativeAssetBalance, metaMaskNativeAssetBalanceSet] = useState<string>();
 
 	const asset = useMemo(() => viteBridgeAssets.tokens[assetIndex], [assetIndex]);
 	const networks = useMemo(() => {
@@ -82,7 +83,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 				(channel[0].desc === fromNetwork.label || channel[1].desc === fromNetwork.label) &&
 				(channel[0].desc === toNetwork.label || channel[1].desc === toNetwork.label)
 		);
-	}, [asset.channels, fromNetwork.label, toNetwork.label]);
+	}, [asset.channels, fromNetwork, toNetwork]);
 	const channelFrom = useMemo(() => {
 		return selectedChannel!.find((side) => side.desc === fromNetworkOptions[fromNetworkIndex].label);
 	}, [selectedChannel, fromNetworkOptions, fromNetworkIndex]);
@@ -94,6 +95,10 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 		[channelFrom, vcInstance, metamaskAddress]
 	);
 	const channelContractAddress = useMemo(() => channelFrom!.contract, [channelFrom]);
+	const showEthWallet = useMemo(
+		() => channelFrom?.network === 'ETH' || channelTo?.network === 'ETH',
+		[channelFrom, channelTo]
+	);
 	const minAmount = useMemo(() => +(channelFrom?.min || 0), [channelFrom]);
 	const maxAmount = useMemo(() => +(channelFrom?.max || 0), [channelFrom]);
 	const fromWallet = useMemo(() => (channelFrom!.network === 'VITE' ? 'Vite Wallet' : 'MetaMask'), [channelFrom]);
@@ -106,18 +111,22 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 		if (!metaMaskNetworkMatchesFromNetwork && fromWallet === 'MetaMask') {
 			return '0';
 		}
+
 		if (channelFrom && balances) {
 			let balance;
-			if (balances?.vite?.[networkType] && channelFrom!.network === 'VITE') {
-				balance = balances.vite[networkType][channelFrom!.tokenId!];
-			} else if (balances?.bsc?.[networkType] && channelFrom!.network === 'BSC') {
-				balance = balances.bsc[networkType][channelFrom!.erc20!];
+			if (balances?.vite?.[networkType] && channelFrom.network === 'VITE') {
+				balance = balances.vite[networkType][channelFrom.tokenId!];
+			} else if (balances?.bsc?.[networkType] && channelFrom.network === 'BSC') {
+				balance = balances.bsc[networkType][channelFrom.erc20!];
+			} else if (balances?.eth?.[networkType] && channelFrom.network === 'ETH') {
+				balance = balances.eth[networkType][channelFrom.erc20!];
 			}
+			// TODO: accommodate native asset in addition to erc20
 			if (balance) {
 				return roundDownTo6Decimals(balance);
 			}
 		}
-		return '...';
+		return '';
 	}, [fromWallet, metaMaskNetworkMatchesFromNetwork, balances, networkType, channelFrom]);
 	const fromWalletConnected = useMemo(() => {
 		if (fromWallet === 'Vite Wallet') {
@@ -148,7 +157,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 			return new ethers.providers.Web3Provider(window.ethereum);
 		}
 	}, [metaMaskChainId]); // eslint-disable-line
-	const erc20Contract = useMemo(() => {
+	const channelFromERC20Contract = useMemo(() => {
 		if (channelFrom!.erc20 && ethersProvider) {
 			return new ethers.Contract(channelFrom!.erc20, _erc20Abi, ethersProvider.getSigner());
 		}
@@ -163,20 +172,31 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 	);
 
 	const checkIfMetaMaskNeedsToChangeNetwork = useCallback(() => {
+		let isWrongNetwork = false;
 		if (fromWallet === 'MetaMask') {
 			if (channelFrom!.network === 'BSC') {
 				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
 					setState({ toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscMainnet });
-					return true;
+					isWrongNetwork = true;
 				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
 					setState({ toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscTestnet });
-					return true;
+					isWrongNetwork = true;
+				}
+			} else if (channelFrom!.network === 'ETH') {
+				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
+					setState({ toast: i18n.switchTheNetworkInYourMetaMaskWalletToEthMainnet });
+					isWrongNetwork = true;
+				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
+					setState({ toast: i18n.switchTheNetworkInYourMetaMaskWalletToRinkebyTestnet });
+					isWrongNetwork = true;
 				}
 			}
-			// TODO: ETH
 		}
-		return false;
-	}, [fromWallet, setState, channelFrom, networkType, metaMaskNetworkMatchesFromNetwork, i18n]);
+		if (isWrongNetwork) {
+			metaMaskNativeAssetBalanceSet('');
+		}
+		return isWrongNetwork;
+	}, [fromWallet, channelFrom, networkType, metaMaskNetworkMatchesFromNetwork, i18n]); // eslint-disable-line
 
 	const openBridgeConfirmationModal = useCallback(async () => {
 		if (checkIfMetaMaskNeedsToChangeNetwork()) {
@@ -216,12 +236,12 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 		try {
 			let inputId = '';
 			const amountInSmallestUnit = toSmallestUnit(amount, channelFrom!.decimals);
-			if (channelFrom!.network === 'BSC' && erc20Contract) {
+			if (channelFrom!.network === 'BSC' && channelFromERC20Contract) {
 				// TODO: come up with better names for allowance and approved
-				const allowance = await erc20Contract.allowance(fromAddress, channelContractAddress);
+				const allowance = await channelFromERC20Contract.allowance(fromAddress, channelContractAddress);
 				const approved = +allowance.toString() >= +amountInSmallestUnit;
 				if (!approved) {
-					await erc20Contract.approve(channelContractAddress, amountInSmallestUnit);
+					await channelFromERC20Contract.approve(channelContractAddress, amountInSmallestUnit);
 				}
 				const erc20Channel = new ethers.Contract(channelContractAddress, _channelAbi, ethersProvider!.getSigner());
 				const originAddr = `0x${wallet.getOriginalAddressFromAddress(destinationAddress)}`;
@@ -296,7 +316,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 		channelFrom,
 		channelTo,
 		destinationAddress,
-		erc20Contract,
+		channelFromERC20Contract,
 		fromAddress,
 		setState,
 		vcInstance,
@@ -322,35 +342,34 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 	}, [vcInstance, channelTo, metamaskAddress]);
 
 	useEffect(() => {
-		if (
-			networkType === 'testnet' &&
-			channelFrom!.desc === 'BSC Testnet' &&
-			erc20Contract &&
-			metamaskAddress &&
-			metaMaskNetworkMatchesFromNetwork
-		) {
-			erc20Contract
-				?.balanceOf(metamaskAddress)
+		if (channelFromERC20Contract && metamaskAddress && metaMaskNetworkMatchesFromNetwork) {
+			const network = channelFrom!.network.toLowerCase() as 'bsc' | 'eth';
+			channelFromERC20Contract
+				.balanceOf(metamaskAddress)
 				.then((data: ethers.BigNumber) => {
-					if (channelFrom!.erc20 && !balances?.bsc?.[networkType]?.[channelFrom!.erc20]) {
-						setState(
-							{ balances: { bsc: { [networkType]: { [channelFrom!.erc20]: ethers.utils.formatUnits(data) } } } },
-							{ deepMerge: true }
-						);
+					if (channelFrom!.erc20 && !assetBalance) {
+						setState({
+							balances: {
+								[network]: {
+									[networkType]: {
+										[channelFrom!.erc20]: ethers.utils.formatUnits(data),
+									},
+								},
+							},
+						});
 					}
 				})
-				.catch((e: any) => {
-					console.log('e:', e);
-				});
+				.catch((e: any) => console.log('e:', e));
 		}
 	}, [
+		balances,
 		channelFrom,
+		assetBalance,
 		metaMaskNetworkMatchesFromNetwork,
-		erc20Contract,
+		channelFromERC20Contract,
 		metamaskAddress,
 		setState,
 		networkType,
-		balances?.bsc,
 	]);
 
 	useEffect(() => {
@@ -358,16 +377,19 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 			ethersProvider
 				.getBalance(metamaskAddress)
 				.then((data) => {
-					setState(
-						{ balances: { bsc: { [networkType]: { bnb: ethers.utils.formatEther(data) } } } },
-						{ deepMerge: true }
-					);
+					metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data));
 				})
 				.catch((e: any) => {
 					setState({ toast: String(e) });
 				});
 		}
 	}, [metaMaskChainId, ethersProvider, metamaskAddress, networkType]); // eslint-disable-line
+
+	useEffect(() => {
+		if (channelFrom?.network === 'BSC' || channelFrom?.network === 'ETH') {
+			checkIfMetaMaskNeedsToChangeNetwork();
+		}
+	}, [channelFrom, checkIfMetaMaskNeedsToChangeNetwork]);
 
 	return (
 		<div className="m-5 xy flex-col lg:flex-row lg:items-start lg:justify-center">
@@ -381,6 +403,12 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 						options={viteBridgeAssets.tokens.map(({ token, icon }) => ({ icon, label: token }))}
 						onPick={(_, i) => {
 							assetIndexSet(i);
+							if (fromNetworkOptions[fromNetworkIndex]) {
+								fromNetworkIndexSet(0);
+							}
+							if (toNetworkOptions[toNetworkIndex]) {
+								toNetworkIndexSet(0);
+							}
 						}}
 					/>
 					<div className="xy my-9 xy gap-3">
@@ -425,7 +453,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 								<div className="flex justify-between">
 									<p className="mb-3 text-xs font-semibold">{i18n.amount}</p>
 									<p className="mb-3 text-xs font-normal">
-										{i18n.balance} : {assetBalance}
+										{i18n.balance} : {assetBalance || '...'}
 									</p>
 								</div>
 								<div className="border border-skin-muted dark:border-none bg-skin-input text-sm flex items-center rounded-sm">
@@ -519,34 +547,43 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 							walletType: 'Vite Wallet',
 							icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
 						},
-						{
-							platform: 'BSC',
-							token: 'BNB',
-							desc: 'Testnet',
-							walletType: 'MetaMask',
-							icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
-						},
+						showEthWallet
+							? {
+									platform: 'ETH',
+									token: 'ETH',
+									desc: 'Rinkeby',
+									walletType: 'MetaMask',
+									// TODO: update to eth icon
+									icon: 'https://static.vite.net/image-1257137467/logo/usdt-logo2.png',
+							  }
+							: {
+									platform: 'BSC',
+									token: 'BNB',
+									desc: 'Testnet',
+									walletType: 'MetaMask',
+									icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
+							  },
 					].map(({ icon, platform, token, desc, walletType }) => {
 						const wallet = {
 							'Vite Wallet': {
 								address: vcInstance?.accounts[0],
 								// `vcInstance?.killSession` doesn't work by itself for some reason
 								logOut: vcInstance?.killSession && (() => vcInstance.killSession()),
-								balance: balances?.vite?.[networkType]?.[viteTokenId],
+								balance: balances?.vite?.[networkType][constant.Vite_TokenId],
 								addressExplorerURL: `https://${networkType === 'testnet' ? 'test.' : ''}vitescan.io/address/${
 									vcInstance?.accounts[0]
 								}`,
 							},
 							MetaMask: {
 								address: metamaskAddress,
-								balance: balances?.bsc?.[networkType]?.bnb,
-								addressExplorerURL: `https://${
-									networkType === 'testnet' ? 'testnet.' : ''
-								}bscscan.com/address/${metamaskAddress}`,
+								balance: metaMaskNativeAssetBalance,
+								addressExplorerURL: showEthWallet
+									? `https://${networkType === 'testnet' ? 'rinkeby.' : ''}etherscan.io/address/${metamaskAddress}`
+									: `https://${networkType === 'testnet' ? 'testnet.' : ''}bscscan.com/address/${metamaskAddress}`,
 							},
 						}[walletType];
 						const connected = !!wallet?.address;
-						const roundedBalance = connected && wallet.balance ? roundDownTo6Decimals(wallet.balance) : '';
+						const roundedBalance = connected && wallet.balance ? roundDownTo6Decimals(wallet.balance) : '...';
 
 						return (
 							<div
@@ -600,7 +637,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 											</div>
 										</div>
 										<p className="mt-3 text-xs font-normal">
-											{token} {i18n.balance} : {roundedBalance ? roundedBalance : '...'}
+											{token} {i18n.balance} : {roundedBalance}
 										</p>
 									</>
 								)}
@@ -621,12 +658,12 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 							<div className="space-y-2">
 								<p className="text-sm font-semibold">{i18n.from.toUpperCase()}</p>
 								<p className="text-sm font-normal text-skin-muted">{channelFrom!.desc}</p>
-								<img src={selectedChannel![fromNetworkIndex].icon} alt={channelFrom!.desc} className="w-8" />
+								<img src={channelFrom!.icon} alt={channelFrom!.desc} className="w-8" />
 							</div>
 							<div className="space-y-2">
 								<p className="text-sm font-semibold">{i18n.to.toUpperCase()}</p>
 								<p className="text-sm font-normal text-skin-muted">{channelTo!.desc}</p>
-								<img src={selectedChannel![toNetworkIndex].icon} alt={channelTo!.desc} className="w-8" />
+								<img src={channelTo!.icon} alt={channelTo!.desc} className="w-8" />
 							</div>
 						</div>
 						<p className="text-skin-muted font-normal text-sm">
@@ -645,7 +682,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 							<p className="text-sm font-normal">{i18n.theTransactionFeesAreSubjectToNetworkConditionsAndMayChange}</p>
 						</div>
 						<Checkbox checked={agreesToTerms} onUserInput={(b) => agreesToTermsSet(b)}>
-							{i18n.iHaveReadAndAgreeToThe}
+							{i18n.iHaveReadAndAgreeToThe}{' '}
 							<A href="TODO: get terms link" className="text-skin-highlight">
 								{i18n.termsOfUse}.
 							</A>
@@ -708,14 +745,14 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 						<div className="flex-1 space-y-6">
 							{[
 								[
-									selectedChannel![fromNetworkIndex].icon,
+									channelFrom!.icon,
 									channelFrom,
 									fromAddress,
 									bridgeTransaction?.fromHash,
 									bridgeTransaction?.fromHashConfirmationNums,
 								],
 								[
-									selectedChannel![toNetworkIndex].icon,
+									channelTo!.icon,
 									channelTo,
 									destinationAddress,
 									bridgeTransaction?.toHash,
@@ -763,4 +800,4 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, tokens, n
 	);
 };
 
-export default connect('i18n, metamaskAddress, vcInstance, balances, tokens, networkType')(Home);
+export default connect('i18n, metamaskAddress, vcInstance, balances, networkType')(Home);

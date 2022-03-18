@@ -31,6 +31,7 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 
 	const updateViteBalanceAndTokens = useCallback(() => {
 		if (vcInstance?.accounts[0]) {
+			console.log('vcInstance.accounts[0]:', vcInstance.accounts[0]);
 			getBalanceInfo(vcInstance.accounts[0])
 				// @ts-ignore
 				.then((res: { balance: { balanceInfoMap: object } }) => {
@@ -42,7 +43,7 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 							balanceUpdates.vite[networkType][tti] = toBiggestUnit(balance, tokenInfo.decimals);
 							tokenUpdates[tti] = tokenInfo;
 						});
-						setState({ balances: balanceUpdates, tokens: tokenUpdates }, { deepMerge: true });
+						setState({ balances: balanceUpdates }, { deepMerge: true });
 					}
 				})
 				.catch((e) => {
@@ -89,4 +90,4 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 	);
 };
 
-export default connect('vcInstance, balances, tokens, networkType')(Router);
+export default connect('vcInstance, balances, networkType')(Router);

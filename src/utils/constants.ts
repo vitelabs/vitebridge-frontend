@@ -7,8 +7,6 @@ export const chainIds = {
 	'ETH Rinkeby': '0x4',
 };
 
-export const viteTokenId = 'tti_5649544520544f4b454e6e40';
-
 // https://github.com/vitelabs/vite-asset-bridge/blob/194a2a3c27f5a24d945a3bda9e0f8eac25633e31/meta.json
 export const viteBridgeAssets = {
 	tokens: [

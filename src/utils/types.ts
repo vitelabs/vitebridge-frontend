@@ -5,7 +5,7 @@ export type Balance = {
 	[tokenId: string]: string;
 };
 
-export type Networks = 'vite' | 'bsc';
+export type Networks = 'vite' | 'bsc' | 'eth';
 export type NetworkTypes = 'testnet' | 'mainnet';
 
 export type State = {
@@ -20,9 +20,6 @@ export type State = {
 		[network in Networks]: {
 			[networkType in NetworkTypes]: Balance;
 		};
-	};
-	tokens: {
-		[tokenId: string]: TokenInfo;
 	};
 };
 
