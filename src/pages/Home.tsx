@@ -115,7 +115,8 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 		if (channelFrom && balances) {
 			let balance;
 			if (balances?.vite?.[networkType] && channelFrom.network === 'VITE') {
-				balance = balances.vite[networkType][channelFrom.tokenId!];
+				// defaults to '0' cuz vite token balances are fetched all at once instead of one at a time like with eth
+				balance = balances.vite[networkType][channelFrom.tokenId!] || '0';
 			} else if (balances?.bsc?.[networkType] && channelFrom.network === 'BSC') {
 				balance = balances.bsc[networkType][channelFrom.erc20!];
 			} else if (balances?.eth?.[networkType] && channelFrom.network === 'ETH') {
@@ -390,7 +391,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 			checkIfMetaMaskNeedsToChangeNetwork();
 		}
 	}, [channelFrom, checkIfMetaMaskNeedsToChangeNetwork]);
-
+	console.log('assetBalance:', assetBalance);
 	return (
 		<div className="m-5 xy flex-col lg:flex-row lg:items-start lg:justify-center">
 			<div className="flex-1 hidden lg:flex flex-col"></div>

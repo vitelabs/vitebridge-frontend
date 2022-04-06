@@ -24,6 +24,7 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 			// https://docs.metamask.io/guide/ethereum-provider.html#accountschanged
 			// @ts-ignore
 			window.ethereum.on('accountsChanged', (accounts: string[]) => {
+				// IDEA: const connected = !!accounts.length;
 				setState({ metamaskAddress: accounts[0] });
 			});
 		}
