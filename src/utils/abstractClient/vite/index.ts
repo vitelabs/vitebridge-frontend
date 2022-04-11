@@ -39,6 +39,8 @@ export class ChannelVite {
 			amount: value,
 		}).accountBlock;
 
+		console.log("sent block", block);
+
 		return this.vcInstance.sendVcTx({ block });
 	}
 
