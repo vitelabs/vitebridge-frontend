@@ -44,38 +44,6 @@ export const viteBridgeAssets = {
 						},
 					},
 				],
-				[
-					{
-						network: 'ETH',
-						desc: 'ETH Rinkeby',
-						// icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
-						// TODO: update icon. Just using this placeholder to differentiate from bsc
-						icon: 'https://static.vite.net/image-1257137467/logo/usdt-logo2.png',
-						contract: '0xd32C96dccD8fd57B461C9B1f8052598d15ab941C',
-						erc20: '0x29673303B938528389eE53daf55f6d6de6e0Cf80',
-						decimals: 18,
-						confirmedThreshold: 10,
-						max: '5',
-						min: '0.1',
-						fee: {
-							fixed: '0',
-						},
-					},
-					{
-						network: 'VITE',
-						desc: 'Vite Testnet',
-						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_8cb7f034e31f8aa86bde4138b5c5b9222d1739859b5b6bca21',
-						tokenId: 'tti_2ff7518e3ee12eb611f895fb',
-						decimals: 18,
-						confirmedThreshold: 100,
-						max: '5',
-						min: '0.1',
-						fee: {
-							fixed: '0',
-						},
-					},
-				],
 			],
 		},
 		{
@@ -106,6 +74,38 @@ export const viteBridgeAssets = {
 						decimals: 18,
 						confirmedThreshold: 100,
 						max: '10',
+						min: '0.1',
+						fee: {
+							fixed: '0',
+						},
+					},
+				],
+				[
+					{
+						network: 'ETH',
+						desc: 'ETH Rinkeby',
+						// icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
+						// TODO: update icon. Just using this placeholder to differentiate from bsc
+						icon: 'https://static.vite.net/image-1257137467/logo/usdt-logo2.png',
+						contract: '0x848aB97D30fC2E3f4cc9d8F37Aff68A5A716a352',
+						erc20: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
+						decimals: 18,
+						confirmedThreshold: 10,
+						max: '5',
+						min: '0.1',
+						fee: {
+							fixed: '0',
+						},
+					},
+					{
+						network: 'VITE',
+						desc: 'Vite Testnet',
+						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
+						contract: 'vite_1c5d11538b40abab906beea5cb1f9dbca259ed275b24521e2b',
+						tokenId: 'tti_5649544520544f4b454e6e40',
+						decimals: 18,
+						confirmedThreshold: 100,
+						max: '5',
 						min: '0.1',
 						fee: {
 							fixed: '0',
