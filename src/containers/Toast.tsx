@@ -41,4 +41,4 @@ const Toast = ({ setState, toast }: Props) => {
 		  );
 };
 
-export default connect('toast')(Toast);
+export default connect(Toast);

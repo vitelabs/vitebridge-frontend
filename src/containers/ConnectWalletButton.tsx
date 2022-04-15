@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import Modal from '../components/Modal';
 import QR from '../components/QR';
 import { connect } from '../utils/global-context';
@@ -14,6 +14,11 @@ type Props = State & {
 
 const ConnectWalletButton = ({ setState, i18n, children, walletType, className, vcInstance }: Props) => {
 	const [connectURI, connectURISet] = useState('');
+	useEffect(() => {
+		if (vcInstance) {
+			vcInstance.on('disconnect', () => setState({ vcInstance: undefined }));
+		}
+	}, [setState, vcInstance]);
 
 	return (
 		<>
@@ -23,9 +28,7 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 					if (walletType === 'Vite Wallet') {
 						vcInstance = initVC();
 						connectURISet(await vcInstance.createSession());
-						vcInstance.on('connect', () => {
-							setState({ vcInstance });
-						});
+						vcInstance.on('connect', () => setState({ vcInstance }));
 					} else {
 						if (metaMaskIsSupported()) {
 							promptMetaMaskAccount()
@@ -58,4 +61,4 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 	);
 };
 
-export default connect('i18n, vcInstance')(ConnectWalletButton);
+export default connect(ConnectWalletButton);

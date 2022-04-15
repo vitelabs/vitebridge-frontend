@@ -1,6 +1,6 @@
 {
 	"lang": "English",
-	"history": "History",
+	"transactions": "Transactions",
 	"chooseAsset": "Choose Asset",
 	"connect": "Connect",
 	"wallet": "Wallet",
@@ -48,6 +48,8 @@
 	"bugBounty": "Bug Bounty",
 	"tutorial": "Tutorial",
 	"help": "Help",
+	"metaMaskNetworkDoesNotMatch": "MetaMask network does not match",
+	"insufficientBalance": "Insufficient balance",
 	"test": "test",
 	"": ""
 }

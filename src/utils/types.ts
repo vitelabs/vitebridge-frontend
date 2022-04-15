@@ -1,3 +1,4 @@
+import { ViteAPI } from '@vite/vitejs/distSrc/viteAPI/type';
 import { setStateType } from './global-context';
 import { VC } from './vc';
 
@@ -10,31 +11,45 @@ export type NetworkTypes = 'testnet' | 'mainnet';
 
 export type State = {
 	setState: setStateType;
+	viteApi: ViteAPI;
 	toast: string;
 	networkType: NetworkTypes;
 	language: string;
 	i18n: { [key: string]: string };
 	vcInstance: VC | null;
 	metamaskAddress: string;
-	balances: {
-		[network in Networks]: {
-			[networkType in NetworkTypes]: Balance;
+	viteBalanceInfo: ViteBalanceInfo;
+};
+
+export type ViteBalanceInfo = {
+	balance: {
+		address: string;
+		blockCount: string;
+		balanceInfoMap?: {
+			[tokenId: string]: {
+				tokenInfo: TokenInfo;
+				balance: string;
+			};
 		};
+	};
+	unreceived: {
+		address: string;
+		blockCount: string;
 	};
 };
 
 export type TokenInfo = {
-	decimals: number;
-	index: number;
-	isOwnerBurnOnly: boolean;
-	isReIssuable: boolean;
-	maxSupply: string;
-	owner: string;
-	ownerBurnOnly: boolean;
-	tokenId: string;
 	tokenName: string;
 	tokenSymbol: string;
 	totalSupply: string;
+	decimals: number;
+	owner: string;
+	tokenId: string;
+	maxSupply: string;
+	ownerBurnOnly: false;
+	isReIssuable: false;
+	index: number;
+	isOwnerBurnOnly: false;
 };
 
 export type NewAccountBlock = {

@@ -65,27 +65,13 @@ export const deepMerge = (target: { [key: string]: any }, source: { [key: string
 	return target || source;
 };
 
-export const connect = (keys?: string | null) => {
-	const mapStateToProps = (dict: object) => {
-		switch (keys) {
-			case undefined:
-				return dict;
-			case null:
-				return {};
-			default:
-				// eslint-disable-next-line
-				return eval(`({${keys}}) => ({${keys}})`)(dict);
-		}
-	};
-
-	// https://stackoverflow.com/a/56989122/13442719
-	return <T,>(Component: React.ComponentType<T>) =>
-		(props: any) =>
-			(
-				<GlobalContext.Consumer>
-					{(value: { state: object; setState: setStateType }) => (
-						<Component {...props} {...mapStateToProps(value.state)} setState={value.setState} />
-					)}
-				</GlobalContext.Consumer>
-			);
+// https://stackoverflow.com/a/56989122/13442719
+export const connect = <T,>(Component: React.ComponentType<T>) => {
+	return (props: any) => (
+		<GlobalContext.Consumer>
+			{(value: { state: object; setState: setStateType }) => (
+				<Component {...props} {...value.state} setState={value.setState} />
+			)}
+		</GlobalContext.Consumer>
+	);
 };

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { wallet, constant } from '@vite/vitejs';
 import { ethers } from 'ethers';
 import Picker from '../components/Picker';
-import { chainIds, combos, viteBridgeAssets } from '../utils/constants';
+import { chainIds, channelCombos, viteBridgeAssets } from '../utils/constants';
 import { connect } from '../utils/global-context';
 import { useTitle } from '../utils/hooks';
 import { BridgeTransaction, State } from '../utils/types';
@@ -27,21 +27,19 @@ import A from '../components/A';
 import Modal from '../components/Modal';
 import Checkbox from '../components/Checkbox';
 import { isDarkMode } from '../utils/misc';
-import { ChannelVite } from '../utils/abstractClient/vite';
+import { ViteChannel } from '../utils/abstractClient/vite';
 import _erc20Abi from '../utils/abstractClient/erc20/erc20.json';
 import _channelAbi from '../utils/abstractClient/erc20/channel.json';
 import Check from '../assets/Check';
 import PendingDots from '../components/PendingDots';
 import { getBridgeTx } from '../utils/services/conversion';
-import { metaMaskIsSupported } from '../utils/wallet';
+import { getViteTokenBalance, metaMaskIsSupported } from '../utils/wallet';
 import Duplicate from '../assets/Duplicate';
 
 const sleep = (ms = 0): Promise<void> => new Promise((res) => setTimeout(() => res(), ms));
 let bridgeTxStatusModalOpen = false;
 
-type Props = State;
-
-const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkType }: Props) => {
+const Home = ({ setState, viteApi, i18n, metamaskAddress, vcInstance, viteBalanceInfo, networkType }: State) => {
 	useTitle('');
 	const [assetIndex, assetIndexSet] = useState(0);
 	const [confirmingBridgeTx, confirmingBridgeTxSet] = useState(false);
@@ -57,6 +55,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 	// @ts-ignore
 	const [metaMaskChainId, metaMaskChainIdSet] = useState(metaMaskIsSupported() ? window?.ethereum?.chainId : '');
 	const [metaMaskNativeAssetBalance, metaMaskNativeAssetBalanceSet] = useState<string>();
+	const [metaMaskFromAssetBalance, metaMaskFromAssetBalanceSet] = useState<string>();
 
 	const asset = useMemo(() => viteBridgeAssets.tokens[assetIndex], [assetIndex]);
 	const networks = useMemo(() => {
@@ -74,7 +73,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 	}, [networks]);
 	const fromNetwork = useMemo(() => fromNetworkOptions[fromNetworkIndex], [fromNetworkOptions, fromNetworkIndex]);
 	const toNetworkOptions = useMemo(() => {
-		return networks.filter((network) => combos[asset.token][fromNetwork.label].includes(network.label));
+		return networks.filter((network) => channelCombos[asset.token][fromNetwork.label].includes(network.label));
 	}, [asset.token, fromNetwork.label, networks]);
 	const toNetwork = useMemo(() => toNetworkOptions[toNetworkIndex], [toNetworkOptions, toNetworkIndex]);
 	const selectedChannel = useMemo(() => {
@@ -107,28 +106,31 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 		() => metaMaskChainId === chainIds[channelFrom!.desc],
 		[metaMaskChainId, channelFrom]
 	);
-	const assetBalance = useMemo(() => {
+	const metaMaskNetworkMatchesToNetwork = useMemo(
+		// @ts-ignore
+		() => metaMaskChainId === chainIds[channelTo!.desc],
+		[metaMaskChainId, channelTo]
+	);
+	const fromAssetBalance = useMemo(() => {
 		if (!metaMaskNetworkMatchesFromNetwork && fromWallet === 'MetaMask') {
-			return '0';
+			return '';
 		}
-
-		if (channelFrom && balances) {
+		if (channelFrom) {
 			let balance;
-			if (balances?.vite?.[networkType] && channelFrom.network === 'VITE') {
-				// defaults to '0' cuz vite token balances are fetched all at once instead of one at a time like with eth
-				balance = balances.vite[networkType][channelFrom.tokenId!] || '0';
-			} else if (balances?.bsc?.[networkType] && channelFrom.network === 'BSC') {
-				balance = balances.bsc[networkType][channelFrom.erc20!];
-			} else if (balances?.eth?.[networkType] && channelFrom.network === 'ETH') {
-				balance = balances.eth[networkType][channelFrom.erc20!];
+			if (viteBalanceInfo && channelFrom.network === 'VITE') {
+				balance = getViteTokenBalance(viteBalanceInfo, constant.Vite_TokenId);
+			} else {
+				balance = metaMaskFromAssetBalance;
 			}
-			// TODO: accommodate native asset in addition to erc20
 			if (balance) {
 				return roundDownTo6Decimals(balance);
 			}
 		}
 		return '';
-	}, [fromWallet, metaMaskNetworkMatchesFromNetwork, balances, networkType, channelFrom]);
+	}, [fromWallet, metaMaskFromAssetBalance, metaMaskNetworkMatchesFromNetwork, viteBalanceInfo, channelFrom]);
+	const fromAssetBalanceIsBelowMinBridgeAmount = useMemo(() => {
+		return +fromAssetBalance < +channelFrom!.min;
+	}, [fromAssetBalance, channelFrom]);
 	const fromWalletConnected = useMemo(() => {
 		if (fromWallet === 'Vite Wallet') {
 			return !!vcInstance;
@@ -209,7 +211,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 			return setState({ toast: i18n.illegalAmount });
 		}
 		if (
-			(channelTo!.network === 'BSC' && !ethers.utils.isAddress(destinationAddress)) ||
+			((channelTo!.network === 'BSC' || channelTo!.network === 'ETH') && !ethers.utils.isAddress(destinationAddress)) ||
 			(channelTo!.network === 'VITE' && !wallet.isValidAddress(destinationAddress))
 		) {
 			return setState({ toast: i18n.illegalAddress });
@@ -237,7 +239,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 		try {
 			let inputId = '';
 			const amountInSmallestUnit = toSmallestUnit(amount, channelFrom!.decimals);
-			if (channelFrom!.network === 'BSC' && channelFromERC20Contract) {
+			if ((channelFrom!.network === 'BSC' || channelFrom!.network === 'ETH') && channelFromERC20Contract) {
 				// TODO: come up with better names for allowance and approved
 				const allowance = await channelFromERC20Contract.allowance(fromAddress, channelContractAddress);
 				const approved = +allowance.toString() >= +amountInSmallestUnit;
@@ -262,14 +264,14 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 					if (id !== prevId) inputId = id;
 				}
 			} else if (channelFrom!.network === 'VITE' && vcInstance) {
-				const channelClient = new ChannelVite({
+				const viteChannel = new ViteChannel({
 					vcInstance,
 					address: channelContractAddress,
 					tokenId: channelFrom!.tokenId!,
 				});
-				const prevId = `0x${(await channelClient.prevInputId())?.[0]}`;
+				const prevId = `0x${(await viteChannel.prevInputId(viteApi))?.[0]}`;
 				confirmingViteConnectSet(true);
-				await channelClient.input(destinationAddress, amountInSmallestUnit);
+				await viteChannel.input(destinationAddress, amountInSmallestUnit);
 				confirmingBridgeTxSet(false);
 				confirmingViteConnectSet(false);
 				transactionConfirmationStatusOpenSet(true);
@@ -277,7 +279,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 				walletPromptLoadingSet(false);
 				while (!inputId) {
 					await sleep(5000);
-					const id = `0x${(await channelClient.prevInputId())?.[0]}`;
+					const id = `0x${(await viteChannel.prevInputId(viteApi))?.[0]}`;
 					if (id !== prevId) inputId = id;
 				}
 			}
@@ -310,6 +312,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 		}
 	}, [
 		i18n,
+		viteApi,
 		networkType,
 		channelContractAddress,
 		amount,
@@ -330,6 +333,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 			window.ethereum.on('chainChanged', (chainId: string) => {
 				console.log('chainId:', chainId);
 				metaMaskChainIdSet(chainId);
+				metaMaskFromAssetBalanceSet(undefined);
 			});
 		}
 	}, []);
@@ -343,29 +347,19 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 	}, [vcInstance, channelTo, metamaskAddress]);
 
 	useEffect(() => {
-		if (channelFromERC20Contract && metamaskAddress && metaMaskNetworkMatchesFromNetwork) {
-			const network = channelFrom!.network.toLowerCase() as 'bsc' | 'eth';
+		if (!fromAssetBalance && channelFromERC20Contract && metamaskAddress && metaMaskNetworkMatchesFromNetwork) {
+			// TODO: accommodate native asset in addition to erc20
+			// if () {
+			// 	metaMaskFromAssetBalanceSet(metaMaskNativeAssetBalance)
+			// }
 			channelFromERC20Contract
 				.balanceOf(metamaskAddress)
-				.then((data: ethers.BigNumber) => {
-					if (channelFrom!.erc20 && !assetBalance) {
-						setState({
-							balances: {
-								[network]: {
-									[networkType]: {
-										[channelFrom!.erc20]: ethers.utils.formatUnits(data),
-									},
-								},
-							},
-						});
-					}
-				})
+				.then((data: ethers.BigNumber) => metaMaskFromAssetBalanceSet(ethers.utils.formatUnits(data)))
 				.catch((e: any) => console.log('e:', e));
 		}
 	}, [
-		balances,
 		channelFrom,
-		assetBalance,
+		fromAssetBalance,
 		metaMaskNetworkMatchesFromNetwork,
 		channelFromERC20Contract,
 		metamaskAddress,
@@ -377,12 +371,8 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 		if (ethersProvider && metamaskAddress && networkType) {
 			ethersProvider
 				.getBalance(metamaskAddress)
-				.then((data) => {
-					metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data));
-				})
-				.catch((e: any) => {
-					setState({ toast: String(e) });
-				});
+				.then((data) => metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data)))
+				.catch((e: any) => setState({ toast: String(e) }));
 		}
 	}, [metaMaskChainId, ethersProvider, metamaskAddress, networkType]); // eslint-disable-line
 
@@ -391,7 +381,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 			checkIfMetaMaskNeedsToChangeNetwork();
 		}
 	}, [channelFrom, checkIfMetaMaskNeedsToChangeNetwork]);
-	console.log('assetBalance:', assetBalance);
+
 	return (
 		<div className="m-5 xy flex-col lg:flex-row lg:items-start lg:justify-center">
 			<div className="flex-1 hidden lg:flex flex-col"></div>
@@ -420,7 +410,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 								options={fromNetworkOptions}
 								onPick={({ label }, i) => {
 									fromNetworkIndexSet(i);
-									if (i >= combos[asset.token][label].length) {
+									if (i >= channelCombos[asset.token][label].length) {
 										toNetworkIndexSet(0);
 									}
 								}}
@@ -430,9 +420,19 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 						<button
 							className="w-12"
 							onClick={() => {
-								fromNetworkIndexSet(networks.findIndex(({ label }) => label === toNetwork.label));
+								fromNetworkIndexSet(
+									Math.max(
+										0,
+										networks.findIndex(({ label }) => label === toNetwork.label)
+									)
+								);
 								toNetworkIndexSet(
-									combos[asset.token][toNetwork.label].findIndex((networkLabel) => fromNetwork.label === networkLabel)
+									Math.max(
+										0,
+										channelCombos[asset.token][toNetwork.label].findIndex(
+											(networkLabel) => fromNetwork.label === networkLabel
+										)
+									)
 								);
 							}}
 						>
@@ -452,19 +452,26 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 						<div className="space-y-5">
 							<div>
 								<div className="flex justify-between">
-									<p className="mb-3 text-xs font-semibold">{i18n.amount}</p>
-									<p className="mb-3 text-xs font-normal">
-										{i18n.balance} : {assetBalance || '...'}
-									</p>
+									<p className="text-xs font-semibold">{i18n.amount}</p>
+									<div className="flex gap-4 text-xs font-normal">
+										{fromAssetBalanceIsBelowMinBridgeAmount &&
+											fromAssetBalance &&
+											(fromWallet === 'MetaMask'
+												? metaMaskNetworkMatchesFromNetwork || metaMaskNetworkMatchesToNetwork
+												: true) && <p className="text-red-500">{i18n.insufficientBalance}</p>}
+										<p>
+											{i18n.balance} : {fromAssetBalance || '...'}
+										</p>
+									</div>
 								</div>
-								<div className="border border-skin-muted dark:border-none bg-skin-input text-sm flex items-center rounded-sm">
+								<div className="mt-3 border border-skin-muted dark:border-none bg-skin-input text-sm flex items-center rounded-sm">
 									<NumericalInput
 										value={amount}
-										onUserInput={(a) => amountSet(a)}
+										onUserInput={(a) => amountSet(a.trim())}
 										className="flex-1 pl-3 py-1"
 										maxDecimals={18}
 									/>
-									<button className="px-3" onClick={() => assetBalance && amountSet(assetBalance)}>
+									<button className="px-3" onClick={() => fromAssetBalance && amountSet(fromAssetBalance)}>
 										<p className="leading-4 text-skin-highlight border-b border-b-skin-highlight border-dashed">
 											{i18n.all}
 										</p>
@@ -475,11 +482,15 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 								<p className="mb-3 text-xs font-semibold">{i18n.destinationAddress}</p>
 								<TextInput
 									value={destinationAddress}
-									onUserInput={(a) => destinationAddressSet(a)}
+									onUserInput={(a) => destinationAddressSet(a.trim())}
 									className="border border-skin-muted dark:border-none bg-skin-input text-sm flex-1 pl-3 py-1 rounded-sm w-full"
 								/>
 							</div>
-							<button className="blue-rect" onClick={openBridgeConfirmationModal}>
+							<button
+								disabled={fromAssetBalanceIsBelowMinBridgeAmount}
+								className="blue-rect"
+								onClick={openBridgeConfirmationModal}
+							>
 								{i18n.next}
 							</button>
 							<div className="bg-skin-reminder font-normal px-5 py-4 text-xs space-y-2">
@@ -555,7 +566,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 									desc: 'Rinkeby',
 									walletType: 'MetaMask',
 									// TODO: update to eth icon
-									icon: 'https://static.vite.net/image-1257137467/logo/usdt-logo2.png',
+									icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
 							  }
 							: {
 									platform: 'BSC',
@@ -565,26 +576,32 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 									icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
 							  },
 					].map(({ icon, platform, token, desc, walletType }) => {
-						const wallet = {
-							'Vite Wallet': {
-								address: vcInstance?.accounts[0],
-								// `vcInstance?.killSession` doesn't work by itself for some reason
-								logOut: vcInstance?.killSession && (() => vcInstance.killSession()),
-								balance: balances?.vite?.[networkType][constant.Vite_TokenId],
-								addressExplorerURL: `https://${networkType === 'testnet' ? 'test.' : ''}vitescan.io/address/${
-									vcInstance?.accounts[0]
-								}`,
-							},
-							MetaMask: {
-								address: metamaskAddress,
-								balance: metaMaskNativeAssetBalance,
-								addressExplorerURL: showEthWallet
-									? `https://${networkType === 'testnet' ? 'rinkeby.' : ''}etherscan.io/address/${metamaskAddress}`
-									: `https://${networkType === 'testnet' ? 'testnet.' : ''}bscscan.com/address/${metamaskAddress}`,
-							},
-						}[walletType];
+						const wallet =
+							walletType === 'MetaMask'
+								? {
+										address: metamaskAddress,
+										balance:
+											metaMaskNetworkMatchesFromNetwork || metaMaskNetworkMatchesToNetwork
+												? metaMaskNativeAssetBalance
+													? roundDownTo6Decimals(metaMaskNativeAssetBalance)
+													: '...'
+												: i18n.metaMaskNetworkDoesNotMatch,
+										addressExplorerURL: showEthWallet
+											? `https://${networkType === 'testnet' ? 'rinkeby.' : ''}etherscan.io/address/${metamaskAddress}`
+											: `https://${networkType === 'testnet' ? 'testnet.' : ''}bscscan.com/address/${metamaskAddress}`,
+								  }
+								: {
+										address: vcInstance?.accounts[0],
+										// `() => vcInstance?.killSession()` doesn't work by itself for some reason
+										logOut: vcInstance?.killSession && (() => vcInstance.killSession()),
+										balance: viteBalanceInfo
+											? roundDownTo6Decimals(getViteTokenBalance(viteBalanceInfo, constant.Vite_TokenId))
+											: '...',
+										addressExplorerURL: `https://${networkType === 'testnet' ? 'test.' : ''}vitescan.io/address/${
+											vcInstance?.accounts[0]
+										}`,
+								  };
 						const connected = !!wallet?.address;
-						const roundedBalance = connected && wallet.balance ? roundDownTo6Decimals(wallet.balance) : '...';
 
 						return (
 							<div
@@ -638,7 +655,7 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 											</div>
 										</div>
 										<p className="mt-3 text-xs font-normal">
-											{token} {i18n.balance} : {roundedBalance}
+											{token} {i18n.balance} : {wallet.balance}
 										</p>
 									</>
 								)}
@@ -801,4 +818,4 @@ const Home = ({ setState, i18n, metamaskAddress, vcInstance, balances, networkTy
 	);
 };
 
-export default connect('i18n, metamaskAddress, vcInstance, balances, networkType')(Home);
+export default connect(Home);

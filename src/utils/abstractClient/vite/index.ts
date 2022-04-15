@@ -2,13 +2,11 @@ import { accountBlock } from '@vite/vitejs';
 import { Buffer } from 'buffer/'; // note: the trailing slash is important!
 import _viteAbi from './channel.json';
 import offChainCode from './offChainCode';
-import { viteClient } from '../../vitescripts';
 import { VC } from '../../vc';
+import { ViteAPI } from '@vite/vitejs/distSrc/viteAPI/type';
 
-export class ChannelVite {
-	viteProvider: typeof viteClient;
+export class ViteChannel {
 	viteChannelAddress: string;
-
 	vcInstance: VC;
 	viteChannelAbi: any[];
 	viteOffChainCode: any;
@@ -18,7 +16,6 @@ export class ChannelVite {
 		this.vcInstance = config.vcInstance;
 		this.viteChannelAbi = _viteAbi;
 		this.viteOffChainCode = Buffer.from(offChainCode, 'hex').toString('base64');
-		this.viteProvider = viteClient;
 		this.viteChannelAddress = config.address;
 		this.tokenId = config.tokenId;
 	}
@@ -42,9 +39,9 @@ export class ChannelVite {
 		return this.vcInstance.sendVcTx({ block });
 	}
 
-	async prevInputId() {
+	async prevInputId(viteApi: ViteAPI) {
 		return readContract(
-			this.viteProvider,
+			viteApi,
 			this.viteChannelAddress,
 			this.viteChannelAbi,
 			this.viteOffChainCode,
@@ -55,7 +52,7 @@ export class ChannelVite {
 }
 
 async function readContract(
-	provider: typeof viteClient,
+	viteApi: ViteAPI,
 	to: string,
 	abi: Array<{ name: string; type: string }>,
 	code: string,
@@ -67,7 +64,7 @@ async function readContract(
 		throw new Error(`method not found:${methodName}`);
 	}
 
-	return provider.callOffChainContract({
+	return viteApi.callOffChainContract({
 		address: to,
 		abi: methodAbi,
 		code: code,
