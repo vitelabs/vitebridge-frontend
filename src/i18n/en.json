@@ -1,6 +1,6 @@
 {
 	"lang": "English",
-	"history": "History",
+	"transactions": "Transactions",
 	"chooseAsset": "Choose Asset",
 	"connect": "Connect",
 	"wallet": "Wallet",
@@ -42,10 +42,14 @@
 	"metaMaskNotDetected": "MetaMask not detected",
 	"switchTheNetworkInYourMetaMaskWalletToBscMainnet": "Switch the network in your MetaMask wallet to BSC Mainnet",
 	"switchTheNetworkInYourMetaMaskWalletToBscTestnet": "Switch the network in your MetaMask wallet to BSC Testnet",
+	"switchTheNetworkInYourMetaMaskWalletToEthMainnet": "Switch the network in your MetaMask wallet to ETH Mainnet",
+	"switchTheNetworkInYourMetaMaskWalletToRinkebyTestnet": "Switch the network in your MetaMask wallet to Rinkeby Testnet",
 	"bridge": "Bridge",
 	"bugBounty": "Bug Bounty",
 	"tutorial": "Tutorial",
 	"help": "Help",
+	"metaMaskNetworkDoesNotMatch": "MetaMask network does not match",
+	"insufficientBalance": "Insufficient balance",
 	"test": "test",
 	"": ""
 }

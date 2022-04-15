@@ -33,14 +33,14 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 					>
 						{i18n.bridge}
 					</A>
-					{/* <A
-						to="/history"
+					<A
+						href="https://test.vitescan.io/bridges"
 						className={`relative text-sm font-semibold xy ${
-							pathname === '/history' ? 'active-tab' : 'text-skin-muted'
+							pathname === '/transactions' ? 'active-tab' : 'text-skin-muted'
 						}`}
 					>
-						{i18n.history}
-					</A> */}
+						{i18n.transactions}
+					</A>
 					<A
 						href="https://medium.com/vitelabs/vitebridge-0-1-bug-bounty-program-109ce87bda2e"
 						className={`relative text-sm font-semibold xy text-skin-muted`}
@@ -109,4 +109,4 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 	);
 };
 
-export default connect('networkType, language, i18n')(PageContainer);
+export default connect(PageContainer);
