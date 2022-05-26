@@ -16,44 +16,15 @@ export const viteBridgeAssets = {
 			channels: [
 				[
 					{
-						network: 'ETH',
-						desc: 'ETH Rinkeby',
-						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
-						contract: '0x848aB97D30fC2E3f4cc9d8F37Aff68A5A716a352',
-						erc20: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
-						decimals: 18,
-						confirmedThreshold: 10,
-						max: '5',
-						min: '0.1',
-						fee: {
-							fixed: '0',
-						},
-					},
-					{
-						network: 'VITE',
-						desc: 'Vite Testnet',
-						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_1c5d11538b40abab906beea5cb1f9dbca259ed275b24521e2b',
-						tokenId: 'tti_5649544520544f4b454e6e40',
-						decimals: 18,
-						confirmedThreshold: 100,
-						max: '5',
-						min: '0.1',
-						fee: {
-							fixed: '0',
-						},
-					},
-				],
-				[
-					{
 						network: 'BSC',
 						desc: 'BSC Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
-						contract: '0xEa52147b9b1d2bf069Da858eFE78bB2aC3dc2EA0',
+						contract: '0x78C18d3D5f86c9e3e14C13b8065018ACd0d76C11',
 						erc20: '0x84AEEa373eF0aCd04f94B15Aa36F4475A0ac6457',
+						channelId: 1,
 						decimals: 18,
 						confirmedThreshold: 10,
-						max: '10',
+						max: '5',
 						min: '0.1',
 						fee: {
 							fixed: '0',
@@ -63,33 +34,30 @@ export const viteBridgeAssets = {
 						network: 'VITE',
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_029b2a33f03a39009f96f141b7e1ae52c73830844f3b9804e8',
+						contract: 'vite_e94c882e6d3905ac212440b47bcdfdd1d2730610c11213d067',
 						tokenId: 'tti_5649544520544f4b454e6e40',
+						channelId: 0,
 						decimals: 18,
-						confirmedThreshold: 100,
-						max: '10',
+						confirmedThreshold: 70,
+						max: '5',
 						min: '0.1',
 						fee: {
 							fixed: '0',
 						},
 					},
 				],
-			],
-		},
-		{
-			token: 'USDV',
-			icon: 'https://static.vite.net/image-1257137467/logo/usdt-logo2.png',
-			channels: [
 				[
 					{
-						network: 'BSC',
-						desc: 'BSC Testnet ',
+						network: 'ETH',
+						desc: 'ETH Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
-						contract: '0x1fF7EFed79585D43FB1c637064480E10c21dB709',
-						erc20: '0xA86f10a4742270466ea9A62C95AdfA1273DF1FaA',
+						contract: '0x649a886A441f3F956e6442E064C8958D191466a6',
+						erc20: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
+						// channel: 1,
+						channelId: 1,
 						decimals: 18,
 						confirmedThreshold: 10,
-						max: '5',
+						max: '10',
 						min: '0.1',
 						fee: {
 							fixed: '0',
@@ -99,11 +67,13 @@ export const viteBridgeAssets = {
 						network: 'VITE',
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_9c337fe9a8d4828c80de00d5c3432f62c3dece4ac9062aa008',
-						tokenId: 'tti_2ff7518e3ee12eb611f895fb',
+						contract: 'vite_44949d8b8fde6cd83c816d7f69581f781b68ca46cca72ec92c',
+						tokenId: 'tti_5649544520544f4b454e6e40',
+						// channel: 0,
+						channelId: 0,
 						decimals: 18,
-						confirmedThreshold: 100,
-						max: '5',
+						confirmedThreshold: 70,
+						max: '10',
 						min: '0.1',
 						fee: {
 							fixed: '0',
@@ -122,11 +92,17 @@ export const channelCombos: {
 } = {};
 
 viteBridgeAssets.tokens.forEach(({ token, channels }) => {
-	channelCombos[token] = {};
+	if (!channelCombos[token]) {
+		channelCombos[token] = {};
+	}
 	channels.forEach((channel, i) => {
-		// NOTE: This assume channel.length = 2
+		if (channel.length !== 2) {
+			throw new Error('channel must have length 2');
+		}
 		channel.forEach((side, i) => {
-			channelCombos[token][side.desc] = channelCombos[token][side.desc] || [];
+			if (!channelCombos[token][side.desc]) {
+				channelCombos[token][side.desc] = [];
+			}
 			channelCombos[token][side.desc].push(channel[i ? 0 : 1].desc);
 		});
 		for (const network in channelCombos[token]) {
@@ -135,4 +111,4 @@ viteBridgeAssets.tokens.forEach(({ token, channels }) => {
 	});
 });
 
-// console.log('channelCombos', JSON.stringify(channelCombos, null, 2));
+console.log('channelCombos', JSON.stringify(channelCombos, null, 2));

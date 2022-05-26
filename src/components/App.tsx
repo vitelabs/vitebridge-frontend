@@ -5,7 +5,7 @@ import Router from './Router';
 import { Provider } from '../utils/global-context';
 import { getMetaMaskAccount } from '../utils/wallet';
 import { useEffect, useState } from 'react';
-import { getValidVCSession, initVC } from '../utils/vc';
+import { getValidVCSession, initViteConnect } from '../utils/viteConnect';
 import { State } from '../utils/types';
 
 const App = () => {
@@ -13,11 +13,12 @@ const App = () => {
 
 	useEffect(() => {
 		(async () => {
+			const vcSession = getValidVCSession();
 			const state: Partial<State> = {
 				networkType: localStorage.networkType || 'testnet',
 				language: localStorage.language || 'en',
 				metamaskAddress: await getMetaMaskAccount(),
-				vcInstance: getValidVCSession() ? initVC() : null,
+				vcInstance: vcSession ? initViteConnect(vcSession) : null,
 			};
 			initialStateSet(state);
 		})();

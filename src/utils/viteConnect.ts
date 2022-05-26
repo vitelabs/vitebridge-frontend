@@ -1,30 +1,36 @@
-// @ts-nocheck
-
 import Connector from '@vite/connector';
 
 export const VCSessionKey = 'vcSession';
 
 export class VC extends Connector {
-	constructor(opts, meta) {
-		super(opts, meta);
-		this.on('connect', (err, payload) => {
-			const { accounts } = payload.params[0];
-			this.setAccState(accounts);
-		});
+	constructor(session?: object, meta?: { session: object; bridge: string }) {
+		super(session, meta);
+		this.on(
+			'connect',
+			(err: Error, payload: { params: [{ accounts: string[] }] }) => {
+				const { accounts } = payload.params[0];
+				this.setAccState(accounts);
+			}
+		);
 		this.on('disconnect', () => {
-			this.stopBizHeartBeat();  // stop heart beat when disconnected
+			this.stopBizHeartBeat(); // stop heart beat when disconnected
 			localStorage.removeItem(VCSessionKey);
 		});
-		this.on('session_update', () => {
-			const { session } = arguments[0];
-			if (session && session.accounts) {
-				this.setAccState(session.accounts);
+		this.on(
+			'session_update',
+			(update: null | { session: { accounts: string[] } }) => {
+				if (update) {
+					const { session } = update;
+					if (session && session.accounts) {
+						this.setAccState(session.accounts);
+					}
+				}
 			}
-		});
+		);
 	}
 
-	setAccState(accounts = []) {
-		if (!accounts || !accounts[0]) throw new Error('addresolves is null');
+	setAccState(accounts: string[] = []) {
+		if (!accounts || !accounts[0]) throw new Error('address is null');
 		this.saveSession();
 	}
 
@@ -41,21 +47,14 @@ export class VC extends Connector {
 		return this.uri;
 	}
 
-	async sendVcTx(...args) {
+	async signAndSendTx(params: object[]) {
 		return new Promise((resolve, reject) => {
-			this.on('disconnect', () => {
-				// reject({ code: 11020, message: '链接断开' });
-				reject({ code: 11020, message: 'broken link' }); // I used Google Translate
-			});
-
-			this.sendCustomRequest({ method: 'vite_signAndSendTx', params: args })
-				.then((r) => {
+			this.sendCustomRequest({ method: 'vite_signAndSendTx', params })
+				.then((result: object) => {
 					this.saveSession();
-					resolve(r);
+					resolve(result);
 				})
-				.catch((e) => {
-					reject(e);
-				});
+				.catch((e: Error) => reject(e));
 		});
 	}
 }
@@ -84,13 +83,9 @@ export function getValidVCSession() {
 	return session;
 }
 
-export function initVC(meta = null) {
-	const session = getValidVCSession();
-	return new VC(
-		{
-			session,
-			bridge: 'wss://biforst.vite.net',
-		},
-		meta
-	);
+export function initViteConnect(session?: object) {
+	return new VC({
+		session,
+		bridge: 'wss://biforst.vite.net',
+	});
 }

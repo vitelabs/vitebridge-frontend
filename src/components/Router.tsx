@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { NewAccountBlock, State, ViteBalanceInfo } from '../utils/types';
 import Toast from '../containers/Toast';
 import { metaMaskIsSupported } from '../utils/wallet';
-import { VCSessionKey } from '../utils/vc';
+import { VCSessionKey } from '../utils/viteConnect';
 import provider from '@vite/vitejs-ws';
 import { ViteAPI } from '@vite/vitejs';
 
@@ -18,16 +18,27 @@ const providerWsURLs = {
 
 const providerTimeout = 60000;
 const providerOptions = { retryTimes: 10, retryInterval: 5000 };
-const testnetRPC = new provider(providerWsURLs.testnet, providerTimeout, providerOptions);
-const mainnetRPC = new provider(providerWsURLs.mainnet, providerTimeout, providerOptions);
+const testnetRPC = new provider(
+	providerWsURLs.testnet,
+	providerTimeout,
+	providerOptions
+);
+const mainnetRPC = new provider(
+	providerWsURLs.mainnet,
+	providerTimeout,
+	providerOptions
+);
 
 type Props = State;
 
 const Router = ({ setState, vcInstance, networkType }: Props) => {
 	const viteApi = useMemo(() => {
-		const viteApi = new ViteAPI(networkType === 'mainnet' ? mainnetRPC : testnetRPC, () => {
-			// console.log('client connected');
-		});
+		const viteApi = new ViteAPI(
+			networkType === 'mainnet' ? mainnetRPC : testnetRPC,
+			() => {
+				// console.log('client connected');
+			}
+		);
 		return viteApi;
 	}, [networkType]); // eslint-disable-line
 
@@ -59,16 +70,17 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 	}, [setState]);
 
 	const updateViteBalanceInfo = useCallback(() => {
+		console.log('addr:', vcInstance?.accounts[0]);
 		if (vcInstance?.accounts[0]) {
 			getBalanceInfo(vcInstance.accounts[0])
 				// @ts-ignore
 				.then((res: ViteBalanceInfo) => {
-					// console.log('res:', res);
-					setState({ viteBalanceInfo: res }, { deepMerge: true });
+					console.log('res:', res);
+					setState({ viteBalanceInfo: res });
 				})
 				.catch((e) => {
 					console.log(e);
-					setState({ toast: JSON.stringify(e), vcInstance: null });
+					setState({ toast: e.message, vcInstance: null });
 					localStorage.removeItem(VCSessionKey);
 					// Sometimes on page load, this will catch with
 					// Error: CONNECTION ERROR: Couldn't connect to node wss://buidl.vite.net/gvite/ws.

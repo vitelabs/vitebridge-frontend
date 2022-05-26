@@ -1,6 +1,6 @@
 import { ViteAPI } from '@vite/vitejs/distSrc/viteAPI/type';
 import { setStateType } from './global-context';
-import { VC } from './vc';
+import { VC } from './viteConnect';
 
 export type Balance = {
 	[tokenId: string]: string;

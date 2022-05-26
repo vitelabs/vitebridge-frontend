@@ -3,7 +3,7 @@ import Modal from '../components/Modal';
 import QR from '../components/QR';
 import { connect } from '../utils/global-context';
 import { State } from '../utils/types';
-import { initVC } from '../utils/vc';
+import { initViteConnect } from '../utils/viteConnect';
 import { metaMaskIsSupported, promptMetaMaskAccount } from '../utils/wallet';
 
 type Props = State & {
@@ -12,11 +12,19 @@ type Props = State & {
 	className?: string;
 };
 
-const ConnectWalletButton = ({ setState, i18n, children, walletType, className, vcInstance }: Props) => {
+const ConnectWalletButton = ({
+	setState,
+	i18n,
+	children,
+	walletType,
+	className,
+	vcInstance,
+}: Props) => {
 	const [connectURI, connectURISet] = useState('');
+
 	useEffect(() => {
 		if (vcInstance) {
-			vcInstance.on('disconnect', () => setState({ vcInstance: undefined }));
+			vcInstance.on('disconnect', () => setState({ vcInstance: null }));
 		}
 	}, [setState, vcInstance]);
 
@@ -26,9 +34,12 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 				className={className}
 				onClick={async () => {
 					if (walletType === 'Vite Wallet') {
-						vcInstance = initVC();
+						vcInstance = initViteConnect();
 						connectURISet(await vcInstance.createSession());
-						vcInstance.on('connect', () => setState({ vcInstance }));
+						vcInstance.on('connect', () => {
+							connectURISet('');
+							setState({ vcInstance });
+						});
 					} else {
 						if (metaMaskIsSupported()) {
 							promptMetaMaskAccount()
@@ -49,7 +60,9 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 			</button>
 			{connectURI && (
 				<Modal header="ViteConnect" onClose={() => connectURISet('')}>
-					<div className="p-5 text-sm font-semibold">{i18n.scanTheQrCodeViaViteWalletApp}</div>
+					<div className="p-5 text-sm font-semibold">
+						{i18n.scanTheQrCodeViaViteWalletApp}
+					</div>
 					<div className="px-20 pt-8 pb-10 xy">
 						<div className="h-64 w-64 bg-white p-2">
 							<QR text={connectURI} />
