@@ -4,6 +4,7 @@ import _viteAbi from './channel.vite.abi.json';
 import offChainCode from './offChainCode';
 import { VC } from '../../viteConnect';
 import { ViteAPI } from '@vite/vitejs/distSrc/viteAPI/type';
+import { Transaction as ViteTransaction } from '@vite/vitejs/distSrc/accountBlock/type';
 
 export class ViteChannel {
 	viteChannelAddress: string;
@@ -41,18 +42,7 @@ export class ViteChannel {
 			amount: value,
 		}).accountBlock;
 
-		return this.vcInstance.signAndSendTx([{ block }]);
-	}
-
-	async prevInputId(viteApi: ViteAPI) {
-		return readContract(
-			viteApi,
-			this.viteChannelAddress,
-			this.viteChannelAbi,
-			this.viteOffChainCode,
-			'prevInputId',
-			[]
-		);
+		return this.vcInstance.signAndSendTx([{ block }]) as Promise<ViteTransaction>;
 	}
 }
 
@@ -64,9 +54,7 @@ async function readContract(
 	methodName: string,
 	params: any[]
 ) {
-	const methodAbi = abi.find(
-		(x) => x.type === 'offchain' && x.name === methodName
-	);
+	const methodAbi = abi.find((x) => x.type === 'offchain' && x.name === methodName);
 	if (!methodAbi) {
 		throw new Error(`method not found: ${methodName}`);
 	}

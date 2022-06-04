@@ -1,4 +1,5 @@
 import { ViteAPI } from '@vite/vitejs/distSrc/viteAPI/type';
+import en from '../i18n/en';
 import { setStateType } from './global-context';
 import { VC } from './viteConnect';
 
@@ -14,8 +15,8 @@ export type State = {
 	viteApi: ViteAPI;
 	toast: string;
 	networkType: NetworkTypes;
-	language: string;
-	i18n: { [key: string]: string };
+	languageType: string;
+	i18n: typeof en;
 	vcInstance: VC | null;
 	metamaskAddress: string;
 	viteBalanceInfo: ViteBalanceInfo;
@@ -60,8 +61,8 @@ export type NewAccountBlock = {
 };
 
 export type BridgeTransaction = {
-	id: string;
-	idx: string;
+	// id: string;
+	// idx: string;
 	amount: string;
 	fromAddress: string;
 	toAddress: string;

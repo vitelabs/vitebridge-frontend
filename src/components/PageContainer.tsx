@@ -12,16 +12,20 @@ type Props = State & {
 	children: ReactNode;
 };
 
-const PageContainer = ({ setState, language, networkType, i18n, children }: Props) => {
+const PageContainer = ({
+	setState,
+	languageType,
+	networkType,
+	i18n,
+	children,
+}: Props) => {
 	const { pathname } = useLocation();
 
 	useEffect(() => {
-		if (!i18n) {
-			import(`../i18n/${language}.json`).then((translation) => {
-				setState({ i18n: translation });
-			});
-		}
-	}, [setState, i18n, language]);
+		import(`../i18n/${languageType}.ts`).then((translation) => {
+			setState({ i18n: translation.default });
+		});
+	}, [languageType]); // eslint-disable-next-line
 
 	return !i18n ? null : (
 		<div className="min-h-screen">
@@ -29,7 +33,9 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 				<div className="flex gap-7">
 					<A
 						to="/"
-						className={`relative text-sm font-semibold xy ${pathname === '/' ? 'active-tab' : 'text-skin-muted'}`}
+						className={`relative text-sm font-semibold xy ${
+							pathname === '/' ? 'active-tab' : 'text-skin-muted'
+						}`}
 					>
 						{i18n.bridge}
 					</A>
@@ -53,20 +59,23 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 					>
 						{i18n.tutorial}
 					</A>
-					<A href="https://t.me/vite_en" className={`relative text-sm font-semibold xy text-skin-muted`}>
+					<A
+						href="https://t.me/vite_en"
+						className={`relative text-sm font-semibold xy text-skin-muted`}
+					>
 						{i18n.help}
 					</A>
 				</div>
 				<div className="flex gap-7">
 					<Select
-						value={language!}
+						value={languageType!}
 						options={[
 							['en', 'English'],
 							// ['tr', 'Türkçe'],
 						]}
 						onUserInput={(v) => {
-							setState({ language: v });
-							localStorage.language = v;
+							setState({ languageType: v });
+							localStorage.languageType = v;
 							import(`../i18n/${v}.json`).then((translation) => {
 								setState({ i18n: translation });
 							});
@@ -75,8 +84,8 @@ const PageContainer = ({ setState, language, networkType, i18n, children }: Prop
 					<Select
 						value={networkType!}
 						options={[
-							// ['mainnet', 'Mainnet'],
-							['testnet', 'Testnet'],
+							// ['mainnet', i18n.mainnet],
+							['testnet', i18n.testnet],
 						]}
 						onUserInput={(v) => {
 							if (v === 'mainnet' || v === 'testnet') {

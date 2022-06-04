@@ -1,3 +1,5 @@
+export const PROD = process.env.NODE_ENV === 'production';
+
 // https://chainlist.org/
 export const chainIds = {
 	// 'Ethereum Mainnet': '0x1',
@@ -111,4 +113,4 @@ viteBridgeAssets.tokens.forEach(({ token, channels }) => {
 	});
 });
 
-console.log('channelCombos', JSON.stringify(channelCombos, null, 2));
+// console.log('channelCombos', JSON.stringify(channelCombos, null, 2));

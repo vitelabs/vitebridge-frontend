@@ -16,7 +16,7 @@ const App = () => {
 			const vcSession = getValidVCSession();
 			const state: Partial<State> = {
 				networkType: localStorage.networkType || 'testnet',
-				language: localStorage.language || 'en',
+				languageType: localStorage.languageType || 'en',
 				metamaskAddress: await getMetaMaskAccount(),
 				vcInstance: vcSession ? initViteConnect(vcSession) : null,
 			};

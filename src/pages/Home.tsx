@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { wallet, constant } from '@vite/vitejs';
 import { ethers } from 'ethers';
 import Picker from '../components/Picker';
-import { chainIds, channelCombos, viteBridgeAssets } from '../utils/constants';
+import { chainIds, channelCombos, PROD, viteBridgeAssets } from '../utils/constants';
 import { connect } from '../utils/global-context';
 import { useTitle } from '../utils/hooks';
 import { BridgeTransaction, State } from '../utils/types';
@@ -32,13 +32,12 @@ import ____erc20Abi from '../utils/abstractClient/erc20/erc20.json';
 import ____channelAbi from '../utils/abstractClient/erc20/channel.ether.abi.json';
 import Check from '../assets/Check';
 import PendingDots from '../components/PendingDots';
-import { getBridgeTx } from '../utils/services/conversion';
 import { getViteTokenBalance, metaMaskIsSupported } from '../utils/wallet';
 import Duplicate from '../assets/Duplicate';
-// import { getPastEvents } from '../utils/vitescripts';
+import { Transaction as ViteTransaction } from '@vite/vitejs/distSrc/accountBlock/type';
+import { getPastEvents, query } from '../utils/viteScripts';
 
-const sleep = (ms = 0): Promise<void> =>
-	new Promise((res) => setTimeout(() => res(), ms));
+const sleep = (ms = 0): Promise<void> => new Promise((res) => setTimeout(() => res(), ms));
 let bridgeTxStatusModalOpen = false;
 
 const Home = ({
@@ -54,40 +53,31 @@ const Home = ({
 	const [assetIndex, assetIndexSet] = useState(0);
 	const [confirmingBridgeTx, confirmingBridgeTxSet] = useState(false);
 	const [confirmingViteConnect, confirmingViteConnectSet] = useState(false);
-	const [
-		transactionConfirmationStatusOpen,
-		transactionConfirmationStatusOpenSet,
-	] = useState(false);
+	const [transactionConfirmationStatusOpen, transactionConfirmationStatusOpenSet] = useState(false);
 	const [fromNetworkIndex, fromNetworkIndexSet] = useState(0);
 	const [toNetworkIndex, toNetworkIndexSet] = useState(0);
 	const [destinationAddress, destinationAddressSet] = useState('');
-	const [amount, amountSet] = useState('');
+	const [amount, amountSet] = useState(PROD ? '' : '0.1'); // saves time during development
 	const [agreesToTerms, agreesToTermsSet] = useState(false);
-	const [bridgeTransaction, bridgeTransactionSet] =
-		useState<BridgeTransaction | null>(null);
+	const [bridgeTransaction, bridgeTransactionSet] = useState<Partial<BridgeTransaction> | null>(
+		null
+	);
 	const [walletPromptLoading, walletPromptLoadingSet] = useState(false);
 	const [metaMaskChainId, metaMaskChainIdSet] = useState(
 		// @ts-ignore
 		metaMaskIsSupported() ? window?.ethereum?.chainId : ''
 	);
-	const [metaMaskNativeAssetBalance, metaMaskNativeAssetBalanceSet] =
-		useState<string>();
-	const [metaMaskFromAssetBalance, metaMaskFromAssetBalanceSet] =
-		useState<string>();
+	const [metaMaskNativeAssetBalance, metaMaskNativeAssetBalanceSet] = useState<string>();
+	const [metaMaskFromAssetBalance, metaMaskFromAssetBalanceSet] = useState<string>();
 
-	const asset = useMemo(
-		() => viteBridgeAssets.tokens[assetIndex],
-		[assetIndex]
-	);
+	const asset = useMemo(() => viteBridgeAssets.tokens[assetIndex], [assetIndex]);
 	const networks = useMemo(() => {
 		const flattenedChannels = asset.channels.flat();
 		const flattenedNetworks = flattenedChannels.map((o) => o.network);
 		return flattenedChannels
 			.filter(({ network }, i) => !flattenedNetworks.includes(network, i + 1))
 			.map(({ icon, desc }) => ({ icon, label: desc }))
-			.sort((a, b) =>
-				a.label.includes('Vite') ? -1 : a.label < b.label ? -1 : 1
-			);
+			.sort((a, b) => (a.label.includes('Vite') ? -1 : a.label < b.label ? -1 : 1));
 	}, [asset.channels]);
 	const fromNetworkOptions = useMemo(() => {
 		// Show all possible networks.
@@ -100,9 +90,7 @@ const Home = ({
 	);
 	const toNetworkOptions = useMemo(() => {
 		return networks.filter((network) => {
-			return channelCombos[asset.token][fromNetwork.label].includes(
-				network.label
-			);
+			return channelCombos[asset.token][fromNetwork.label].includes(network.label);
 		});
 	}, [asset.token, fromNetwork.label, networks]);
 	const toNetwork = useMemo(
@@ -112,36 +100,26 @@ const Home = ({
 	const selectedChannel = useMemo(() => {
 		return asset.channels.find(
 			(channel) =>
-				(channel[0].desc === fromNetwork.label ||
-					channel[1].desc === fromNetwork.label) &&
-				(channel[0].desc === toNetwork.label ||
-					channel[1].desc === toNetwork.label)
-		);
+				(channel[0].desc === fromNetwork.label || channel[1].desc === fromNetwork.label) &&
+				(channel[0].desc === toNetwork.label || channel[1].desc === toNetwork.label)
+		)!;
 	}, [asset.channels, fromNetwork, toNetwork]);
 	const channelFrom = useMemo(() => {
-		return selectedChannel!.find(
+		return selectedChannel.find(
 			(side) => side.desc === fromNetworkOptions[fromNetworkIndex].label
-		);
+		)!;
 	}, [selectedChannel, fromNetworkOptions, fromNetworkIndex]);
 	const channelTo = useMemo(() => {
-		return selectedChannel!.find(
-			(side) => side.desc === toNetworkOptions[toNetworkIndex].label
-		);
+		return selectedChannel.find((side) => side.desc === toNetworkOptions[toNetworkIndex].label)!;
 	}, [selectedChannel, toNetworkOptions, toNetworkIndex]);
 	const channelFromId = useMemo(() => {
 		return channelFrom?.channelId;
 	}, [channelFrom]);
 	const fromAddress = useMemo(
-		() =>
-			(channelFrom!.network === 'VITE'
-				? vcInstance?.accounts?.[0]
-				: metamaskAddress) || '',
+		() => (channelFrom.network === 'VITE' ? vcInstance?.accounts?.[0] : metamaskAddress) || '',
 		[channelFrom, vcInstance, metamaskAddress]
 	);
-	const channelContractAddress = useMemo(
-		() => channelFrom!.contract,
-		[channelFrom]
-	);
+	const channelFromContractAddress = useMemo(() => channelFrom.contract, [channelFrom]);
 	const showEthWallet = useMemo(
 		() => channelFrom?.network === 'ETH' || channelTo?.network === 'ETH',
 		[channelFrom, channelTo]
@@ -149,17 +127,17 @@ const Home = ({
 	const minAmount = useMemo(() => +(channelFrom?.min || 0), [channelFrom]);
 	const maxAmount = useMemo(() => +(channelFrom?.max || 0), [channelFrom]);
 	const fromWallet = useMemo(
-		() => (channelFrom!.network === 'VITE' ? 'Vite Wallet' : 'MetaMask'),
+		() => (channelFrom.network === 'VITE' ? 'Vite Wallet' : 'MetaMask'),
 		[channelFrom]
 	);
 	const metaMaskNetworkMatchesFromNetwork = useMemo(
 		// @ts-ignore
-		() => metaMaskChainId === chainIds[channelFrom!.desc],
+		() => metaMaskChainId === chainIds[channelFrom.desc],
 		[metaMaskChainId, channelFrom]
 	);
 	const metaMaskNetworkMatchesToNetwork = useMemo(
 		// @ts-ignore
-		() => metaMaskChainId === chainIds[channelTo!.desc],
+		() => metaMaskChainId === chainIds[channelTo.desc],
 		[metaMaskChainId, channelTo]
 	);
 	const fromAssetBalance = useMemo(() => {
@@ -186,7 +164,7 @@ const Home = ({
 		channelFrom,
 	]);
 	const fromAssetBalanceIsBelowMinBridgeAmount = useMemo(() => {
-		return +fromAssetBalance < +channelFrom!.min;
+		return +fromAssetBalance < +channelFrom.min;
 	}, [fromAssetBalance, channelFrom]);
 	const fromWalletConnected = useMemo(() => {
 		if (fromWallet === 'Vite Wallet') {
@@ -204,10 +182,8 @@ const Home = ({
 			stepsCompleted++;
 		}
 		if (
-			(bridgeTransaction?.fromHashConfirmationNums || 0) >=
-				channelFrom!.confirmedThreshold &&
-			(bridgeTransaction?.toHashConfirmationNums || 0) >=
-				channelTo!.confirmedThreshold
+			(bridgeTransaction?.fromHashConfirmationNums || 0) >= channelFrom.confirmedThreshold &&
+			(bridgeTransaction?.toHashConfirmationNums || 0) >= channelTo.confirmedThreshold
 		) {
 			stepsCompleted++;
 		}
@@ -220,12 +196,8 @@ const Home = ({
 		}
 	}, [metaMaskChainId]); // eslint-disable-line
 	const channelFromERC20Contract = useMemo(() => {
-		if (channelFrom!.erc20 && ethersProvider) {
-			return new ethers.Contract(
-				channelFrom!.erc20,
-				____erc20Abi,
-				ethersProvider.getSigner()
-			);
+		if (channelFrom.erc20 && ethersProvider) {
+			return new ethers.Contract(channelFrom.erc20, ____erc20Abi, ethersProvider.getSigner());
 		}
 	}, [channelFrom, ethersProvider]);
 
@@ -240,31 +212,25 @@ const Home = ({
 	const checkIfMetaMaskNeedsToChangeNetwork = useCallback(() => {
 		let isWrongNetwork = false;
 		if (fromWallet === 'MetaMask') {
-			if (channelFrom!.network === 'BSC') {
+			if (channelFrom.network === 'BSC') {
 				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
 					setState({
 						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscMainnet,
 					});
 					isWrongNetwork = true;
-				} else if (
-					networkType === 'testnet' &&
-					!metaMaskNetworkMatchesFromNetwork
-				) {
+				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
 					setState({
 						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscTestnet,
 					});
 					isWrongNetwork = true;
 				}
-			} else if (channelFrom!.network === 'ETH') {
+			} else if (channelFrom.network === 'ETH') {
 				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
 					setState({
 						toast: i18n.switchTheNetworkInYourMetaMaskWalletToEthMainnet,
 					});
 					isWrongNetwork = true;
-				} else if (
-					networkType === 'testnet' &&
-					!metaMaskNetworkMatchesFromNetwork
-				) {
+				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
 					setState({
 						toast: i18n.switchTheNetworkInYourMetaMaskWalletToRinkebyTestnet,
 					});
@@ -276,14 +242,7 @@ const Home = ({
 			metaMaskNativeAssetBalanceSet('');
 		}
 		return isWrongNetwork;
-	}, [
-		setState,
-		fromWallet,
-		channelFrom,
-		networkType,
-		metaMaskNetworkMatchesFromNetwork,
-		i18n,
-	]); // eslint-disable-line
+	}, [setState, fromWallet, channelFrom, networkType, metaMaskNetworkMatchesFromNetwork, i18n]); // eslint-disable-line
 
 	const openBridgeConfirmationModal = useCallback(async () => {
 		if (checkIfMetaMaskNeedsToChangeNetwork()) {
@@ -295,15 +254,14 @@ const Home = ({
 			return setState({ toast: i18n.illegalAmount });
 		}
 		if (
-			((channelTo!.network === 'BSC' || channelTo!.network === 'ETH') &&
+			((channelTo.network === 'BSC' || channelTo.network === 'ETH') &&
 				!ethers.utils.isAddress(destinationAddress)) ||
-			(channelTo!.network === 'VITE' &&
-				!wallet.isValidAddress(destinationAddress))
+			(channelTo.network === 'VITE' && !wallet.isValidAddress(destinationAddress))
 		) {
 			return setState({ toast: i18n.illegalAddress });
 		}
 		confirmingBridgeTxSet(true);
-		agreesToTermsSet(false);
+		agreesToTermsSet(!PROD); // saves time during development
 		walletPromptLoadingSet(false);
 	}, [
 		checkIfMetaMaskNeedsToChangeNetwork,
@@ -322,38 +280,35 @@ const Home = ({
 		}
 		bridgeTransactionSet(null);
 		walletPromptLoadingSet(true);
+
+		let ethToViteInputTx: ethers.providers.TransactionResponse;
+		let ethToViteOutputTx: ViteTransaction;
+		let viteToEthInputReceiveTx: ViteTransaction;
+		let viteToEthOutputTx: ethers.providers.TransactionResponse;
+		let ethToViteOutputHash: string;
 		try {
-			let inputId = '';
-			const amountInSmallestUnit = toSmallestUnit(
-				amount,
-				channelFrom!.decimals
-			);
+			const amountInSmallestUnit = toSmallestUnit(amount, channelFrom.decimals);
 			if (
-				(channelFrom!.network === 'BSC' || channelFrom!.network === 'ETH') &&
-				channelFromERC20Contract
+				(channelFrom.network === 'BSC' || channelFrom.network === 'ETH') &&
+				channelFromERC20Contract &&
+				ethersProvider
 			) {
 				// TODO: come up with better names for allowance and approved
 				const allowance = await channelFromERC20Contract.allowance(
 					fromAddress,
-					channelContractAddress
+					channelFromContractAddress
 				);
 				const approved = +allowance.toString() >= +amountInSmallestUnit;
 				if (!approved) {
-					await channelFromERC20Contract.approve(
-						channelContractAddress,
-						amountInSmallestUnit
-					);
+					await channelFromERC20Contract.approve(channelFromContractAddress, amountInSmallestUnit);
 				}
 				const erc20Channel = new ethers.Contract(
-					channelContractAddress,
+					channelFromContractAddress,
 					____channelAbi,
-					ethersProvider!.getSigner()
+					ethersProvider.getSigner()
 				);
-				const originAddr = `0x${wallet.getOriginalAddressFromAddress(
-					destinationAddress
-				)}`;
-				// const prevId = await erc20Channel.prevInputId();
-				await erc20Channel.input(
+				const originAddr = `0x${wallet.getOriginalAddressFromAddress(destinationAddress)}`;
+				ethToViteInputTx = await erc20Channel.input(
 					channelFromId,
 					originAddr,
 					amountInSmallestUnit,
@@ -367,21 +322,36 @@ const Home = ({
 				transactionConfirmationStatusOpenSet(true);
 				bridgeTxStatusModalOpen = true;
 				walletPromptLoadingSet(false);
-				// while (!inputId) {
-				// 	await sleep(5000);
-				// 	const id = await erc20Channel.prevInputId();
-				// 	if (id !== prevId) inputId = id;
-				// }
-			} else if (channelFrom!.network === 'VITE' && vcInstance) {
+				while (true) {
+					ethToViteInputTx = await ethersProvider.getTransaction(ethToViteInputTx.hash);
+					if (ethToViteInputTx.blockNumber) break;
+					await sleep(5000);
+				}
+				const events = await ethersProvider!.getLogs({
+					fromBlock: ethToViteInputTx.blockNumber,
+					toBlock: ethToViteInputTx.blockNumber,
+					address: channelFromContractAddress,
+					topics: [ethers.utils.id('Input(uint256,uint256,bytes32,bytes,uint256,address)')],
+				});
+				// console.log(
+				// 	`channelId:${events[0].args.channelId.toString()}, inputHash:${
+				// 		events[0].args.inputHash
+				// 	}, inputId:${events[0].args.index.toString()}`
+				// );
+				let abi = [
+					'event Input(uint256 channelId, uint256 index, bytes32 inputHash, bytes dest, uint256 value, address from)',
+				];
+				let iface = new ethers.utils.Interface(abi);
+				let parsedEvents = events.map((log) => iface.parseLog(log));
+				ethToViteOutputHash = parsedEvents[0].args.inputHash;
+			} else if (channelFrom.network === 'VITE' && vcInstance) {
 				const viteChannel = new ViteChannel({
 					vcInstance,
-					address: channelContractAddress,
-					tokenId: channelFrom!.tokenId!,
+					address: channelFromContractAddress,
+					tokenId: channelFrom.tokenId!,
 				});
-				console.log('viteChannel.prevInputId:', viteChannel.prevInputId);
-				// const prevId = `0x${(await viteChannel.prevInputId(viteApi))?.[0]}`;
 				confirmingViteConnectSet(true);
-				await viteChannel.input(
+				let viteToEthInputSendTx = await viteChannel.input(
 					channelFromId!,
 					destinationAddress,
 					amountInSmallestUnit
@@ -389,60 +359,130 @@ const Home = ({
 				confirmingBridgeTxSet(false);
 				confirmingViteConnectSet(false);
 				transactionConfirmationStatusOpenSet(true);
-				return;
-				// bridgeTxStatusModalOpen = true;
-				// walletPromptLoadingSet(false);
-				// while (!inputId) {
-				// 	await sleep(5000);
-				// 	const id = `0x${(await viteChannel.prevInputId(viteApi))?.[0]}`;
-				// 	if (id !== prevId) inputId = id;
-				// }
+				bridgeTxStatusModalOpen = true;
+				walletPromptLoadingSet(false);
+				while (true) {
+					viteToEthInputSendTx = await viteApi.request(
+						'ledger_getAccountBlockByHash',
+						viteToEthInputSendTx.hash
+					);
+					if (viteToEthInputSendTx.receiveBlockHash) break;
+					await sleep(5000);
+				}
+				viteToEthInputReceiveTx = await viteApi.request(
+					'ledger_getAccountBlockByHash',
+					viteToEthInputSendTx.receiveBlockHash
+				);
 			}
-			let bridgeTx: BridgeTransaction;
+
+			let bridgeTx: Partial<BridgeTransaction> = {
+				fromHash: ethToViteInputTx!?.hash || viteToEthInputReceiveTx!?.hash,
+			};
 			let fromConfirmed = false;
 			let toConfirmed = false;
-			while ((!fromConfirmed || !toConfirmed) && bridgeTxStatusModalOpen) {
-				await sleep(5000);
+			while (true) {
+				fromConfirmed = (bridgeTx.fromHashConfirmationNums || 0) >= channelFrom.confirmedThreshold;
+				if (ethToViteInputTx!) {
+					if (ethToViteInputTx.blockNumber) {
+						if (!fromConfirmed) {
+							const currentNumber = await ethersProvider!.getBlockNumber();
+							bridgeTx.fromHashConfirmationNums = currentNumber - ethToViteInputTx.blockNumber;
+						}
 
-				if (ethersProvider) {
-					const txHash =
-						'0xefa21ca3c9c37399b1c2981eab1512cb1186249f4cc4b67223345b8bbfb41c1b';
-
-					const tx = await ethersProvider.getTransaction(txHash);
-
-					if (tx) {
-						const currentNumber = await ethersProvider.getBlockNumber();
-						// @ts-ignore
-						console.log('confirmed number:', currentNumber - tx.blockNumber);
-
-						// getPastEvents(viteApi, );
-
-						// const events = await vault.queryFilter(
-						// 	vault.filters.Input,
-						// 	tx.blockNumber,
-						// 	tx.blockNumber
-						// );
-						// if (events && events.length > 0) {
-						// 	// console.log(events);
-						// 	console.log(
-						// 		`channelId:${events[0].args.channelId.toString()}, inputHash:${
-						// 			events[0].args.inputHash
-						// 		}, inputId:${events[0].args.index.toString()}`
-						// 	);
-						// }
+						//  ethToViteOutputTx = await viteApi.request(
+						//  	'ledger_getLatestAccountBlock',
+						//  	'vite_e94c882e6d3905ac212440b47bcdfdd1d2730610c11213d067'
+						//  );
 					}
-					console.log(tx);
+					console.log('ethToViteOutputHash:', ethToViteOutputHash!);
+					// const block = await viteApi.request(
+					// 	'ledger_getLatestAccountBlock',
+					// 	'' + channelTo.channelId
+					// );
+					// console.log('block:', block);
 
-					// bridgeTx = await getBridgeTx(networkType, { id: inputId });
-					// if (bridgeTx) {
-					// 	bridgeTransactionSet(bridgeTx);
-					// 	fromConfirmed =
-					// 		bridgeTx.fromHashConfirmationNums >=
-					// 		channelFrom!.confirmedThreshold;
-					// 	toConfirmed =
-					// 		bridgeTx.toHashConfirmationNums >= channelTo!.confirmedThreshold;
+					// const output = {
+					// 	channelId: channelTo.channelId,
+					// 	outputHash: ethToViteOutputHash!,
+					// 	outputId: channelFrom.channelId, // NOTE: assume outputId is channelFrom.channelId
+					// };
+					// console.log('output:', output);
+					// const channel = await query(viteApi, ____channelAbi, channelTo.contract, 'channels', [
+					// 	output.channelId + '',
+					// ]);
+					// console.log('channel:', channel);
+					// if (+channel?.[2].toString() >= output.outputId) {
+					// 	const events = await getPastEvents(
+					// 		viteApi,
+					// 		channelTo.contract,
+					// 		____channelAbi,
+					// 		'Output',
+					// 		{
+					// 			fromHeight: +block.height - 10 < 0 ? 1 : +block.height - 10,
+					// 			toHeight: 0,
+					// 		}
+					// 	);
+					// 	console.log('events', events);
+					// 	const originalHash = output.outputHash.replace('0x', '');
+					// 	const event = events.find((e) => e.returnValues['outputHash'] === originalHash);
+					// 	if (event) {
+					// 		const block = await viteApi.request(
+					// 			'ledger_getAccountBlockByHash',
+					// 			event.accountBlockHash
+					// 		);
+					// 		console.log('confirmations:', block.confirmations);
+					// 	}
 					// }
+				} else if (viteToEthInputReceiveTx!) {
+					// viteToEthInputReceiveTx = await viteApi.request(
+					// 	'ledger_getAccountBlockByHash',
+					// 	viteToEthInputSendTx.hash
+					// );
+					// getPastEvents(viteApi, );
+					if (!fromConfirmed) {
+						viteToEthInputReceiveTx = await viteApi.request(
+							'ledger_getAccountBlockByHash',
+							viteToEthInputReceiveTx.hash
+						);
+						bridgeTx.fromHashConfirmationNums = +viteToEthInputReceiveTx.confirmations!;
+					}
+					const currentNumber = await ethersProvider!.getBlockNumber();
+					// NOTE: This assumes the channelTo is compatible with ethers
+					const erc20Channel = new ethers.Contract(
+						channelTo.contract,
+						____channelAbi,
+						ethersProvider!.getSigner()
+					);
+					const events = await erc20Channel.queryFilter(
+						erc20Channel.filters.Output(null, null, null, null, null),
+						currentNumber - 1000,
+						currentNumber
+					);
+					if (events && events.length > 0) {
+						// const output = {
+						// 	// ethChannelId: 1,
+						// 	outputHash: 'todo',
+						// 	// outputId: 1,
+						// };
+						// const target = events.filter((x) => {
+						// 	// @ts-ignore
+						// 	console.log(x.args.outputHash === output.outputHash);
+						// 	// @ts-ignore
+						// 	return x.args.outputHash === output.outputHash;
+						// });
+						// console.log('confirmations:', currentNumber - target[0].blockNumber);
+						// // console.log("confirmed number:", currentNumber - tx.blockNumber);
+						// bridgeTx.toHashConfirmationNums = currentNumber - target[0].blockNumber;
+					}
 				}
+				fromConfirmed = (bridgeTx.fromHashConfirmationNums || 0) >= channelFrom.confirmedThreshold;
+				toConfirmed = (bridgeTx.toHashConfirmationNums || 0) >= channelTo.confirmedThreshold;
+				bridgeTransactionSet({ ...bridgeTx });
+
+				if ((fromConfirmed && toConfirmed) || !bridgeTxStatusModalOpen) {
+					break;
+				}
+				await sleep(5000);
 			}
 			if (bridgeTxStatusModalOpen) {
 				// QUESTION: Isn't the transaction technically completed when bridgeTx has a `toHash` with sufficient confirmations?
@@ -464,7 +504,7 @@ const Home = ({
 		i18n,
 		viteApi,
 		networkType,
-		channelContractAddress,
+		channelFromContractAddress,
 		amount,
 		ethersProvider,
 		channelFrom,
@@ -489,7 +529,7 @@ const Home = ({
 	}, []);
 
 	useEffect(() => {
-		if (channelTo!.network === 'VITE') {
+		if (channelTo.network === 'VITE') {
 			destinationAddressSet(vcInstance?.accounts[0] || '');
 		} else {
 			destinationAddressSet(metamaskAddress || '');
@@ -528,9 +568,7 @@ const Home = ({
 		if (ethersProvider && metamaskAddress && networkType) {
 			ethersProvider
 				.getBalance(metamaskAddress)
-				.then((data) =>
-					metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data))
-				)
+				.then((data) => metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data)))
 				.catch((e: any) => setState({ toast: String(e) }));
 		}
 	}, [metaMaskChainId, ethersProvider, metamaskAddress, networkType]); // eslint-disable-line
@@ -577,7 +615,7 @@ const Home = ({
 									}
 								}}
 							/>
-							<IconCircle src={channelFrom!.icon} alt={channelFrom!.desc} />
+							<IconCircle src={channelFrom.icon} alt={channelFrom.desc} />
 						</div>
 						<button
 							className="w-12"
@@ -607,7 +645,7 @@ const Home = ({
 								options={toNetworkOptions}
 								onPick={(_, i) => toNetworkIndexSet(i)}
 							/>
-							<IconCircle src={channelTo!.icon} alt={channelTo!.desc} />
+							<IconCircle src={channelTo.icon} alt={channelTo.desc} />
 						</div>
 					</div>
 					{fromWalletConnected ? (
@@ -619,13 +657,8 @@ const Home = ({
 										{fromAssetBalanceIsBelowMinBridgeAmount &&
 											fromAssetBalance &&
 											(fromWallet === 'MetaMask'
-												? metaMaskNetworkMatchesFromNetwork ||
-												  metaMaskNetworkMatchesToNetwork
-												: true) && (
-												<p className="text-red-500">
-													{i18n.insufficientBalance}
-												</p>
-											)}
+												? metaMaskNetworkMatchesFromNetwork || metaMaskNetworkMatchesToNetwork
+												: true) && <p className="text-red-500">{i18n.insufficientBalance}</p>}
 										<p>
 											{i18n.balance} : {fromAssetBalance || '...'}
 										</p>
@@ -640,9 +673,7 @@ const Home = ({
 									/>
 									<button
 										className="px-3"
-										onClick={() =>
-											fromAssetBalance && amountSet(fromAssetBalance)
-										}
+										onClick={() => fromAssetBalance && amountSet(fromAssetBalance)}
 									>
 										<p className="leading-4 text-skin-highlight border-b border-b-skin-highlight border-dashed">
 											{i18n.all}
@@ -651,9 +682,7 @@ const Home = ({
 								</div>
 							</div>
 							<div>
-								<p className="mb-3 text-xs font-semibold">
-									{i18n.destinationAddress}
-								</p>
+								<p className="mb-3 text-xs font-semibold">{i18n.destinationAddress}</p>
 								<TextInput
 									value={destinationAddress}
 									onUserInput={(a) => destinationAddressSet(a.trim())}
@@ -685,6 +714,107 @@ const Home = ({
 							{i18n.connect} {fromWallet}
 						</ConnectWalletButton>
 					)}
+					<button
+						className=""
+						onClick={async () => {
+							console.log('???');
+							// parsedEvents
+							// [
+							// 	{
+							// 		eventFragment: {
+							// 			name: 'Input',
+							// 			anonymous: false,
+							// 			inputs: [
+							// 				{
+							// 					name: 'channelId',
+							// 					type: 'uint256',
+							// 					indexed: null,
+							// 					components: null,
+							// 					arrayLength: null,
+							// 					arrayChildren: null,
+							// 					baseType: 'uint256',
+							// 					_isParamType: true,
+							// 				},
+							// 				{
+							// 					name: 'index',
+							// 					type: 'uint256',
+							// 					indexed: null,
+							// 					components: null,
+							// 					arrayLength: null,
+							// 					arrayChildren: null,
+							// 					baseType: 'uint256',
+							// 					_isParamType: true,
+							// 				},
+							// 				{
+							// 					name: 'inputHash',
+							// 					type: 'bytes32',
+							// 					indexed: null,
+							// 					components: null,
+							// 					arrayLength: null,
+							// 					arrayChildren: null,
+							// 					baseType: 'bytes32',
+							// 					_isParamType: true,
+							// 				},
+							// 				{
+							// 					name: 'dest',
+							// 					type: 'bytes',
+							// 					indexed: null,
+							// 					components: null,
+							// 					arrayLength: null,
+							// 					arrayChildren: null,
+							// 					baseType: 'bytes',
+							// 					_isParamType: true,
+							// 				},
+							// 				{
+							// 					name: 'value',
+							// 					type: 'uint256',
+							// 					indexed: null,
+							// 					components: null,
+							// 					arrayLength: null,
+							// 					arrayChildren: null,
+							// 					baseType: 'uint256',
+							// 					_isParamType: true,
+							// 				},
+							// 				{
+							// 					name: 'from',
+							// 					type: 'address',
+							// 					indexed: null,
+							// 					components: null,
+							// 					arrayLength: null,
+							// 					arrayChildren: null,
+							// 					baseType: 'address',
+							// 					_isParamType: true,
+							// 				},
+							// 			],
+							// 			type: 'event',
+							// 			_isFragment: true,
+							// 		},
+							// 		name: 'Input',
+							// 		signature: 'Input(uint256,uint256,bytes32,bytes,uint256,address)',
+							// 		topic: '0x7b3c301d06629043d2b3ab060ac28904a2486a88941fe2d08d81d2efdc40cd5d',
+							// 		args: [
+							// 			{
+							// 				type: 'BigNumber',
+							// 				hex: '0x01',
+							// 			},
+							// 			{
+							// 				type: 'BigNumber',
+							// 				hex: '0x07',
+							// 			},
+							// 			'0xdbbab2994aaf1189c0316523c21bacc18550a35b36d53c8b686a077806919ace',
+							// 			'0xf30697191707a723c70d0652ab80304195e5928d00',
+							// 			{
+							// 				type: 'BigNumber',
+							// 				hex: '0x016345785d8a0000',
+							// 			},
+							// 			'0xF1e262E23E90F2b1f7A77FeD8d2E2aaF1e518f3F',
+							// 		],
+							// 	},
+							// ];
+						}}
+					>
+						teste
+					</button>
 				</div>
 				<div>
 					<div className="relative flex w-full">
@@ -696,37 +826,31 @@ const Home = ({
 								background: `linear-gradient(to right, var(--highlight-color), var(--highlight-color) ${progressPercentage}%, var(--lowlight-color) ${progressPercentage}%, var(--lowlight-color))`,
 							}}
 						/>
-						{[
-							i18n.chooseChainAsset,
-							i18n.connectWallet,
-							i18n.sendTransaction,
-							i18n.success,
-						].map((text, i) => {
-							const passed = progressPercentage >= (i / 3) * 100;
-							return (
-								<div
-									key={text}
-									className="flex-1 xy flex-col z-10 overflow-clip"
-								>
-									<div className="flex xy mb-4">
-										<div
-											className={`h-5 w-5 rounded-full bg-skin-middleground shadow-skin-base ${
-												passed
-													? 'border-skin-highlight border-[6px]'
-													: 'border-skin-lowlight border-[3px]'
+						{[i18n.chooseChainAsset, i18n.connectWallet, i18n.sendTransaction, i18n.success].map(
+							(text, i) => {
+								const passed = progressPercentage >= (i / 3) * 100;
+								return (
+									<div key={text} className="flex-1 xy flex-col z-10 overflow-clip">
+										<div className="flex xy mb-4">
+											<div
+												className={`h-5 w-5 rounded-full bg-skin-middleground shadow-skin-base ${
+													passed
+														? 'border-skin-highlight border-[6px]'
+														: 'border-skin-lowlight border-[3px]'
+												}`}
+											/>
+										</div>
+										<p
+											className={`text-xs max-w-full truncate ${
+												passed ? 'font-semibold' : 'font-normal text-skin-muted'
 											}`}
-										/>
+										>
+											{text}
+										</p>
 									</div>
-									<p
-										className={`text-xs max-w-full truncate ${
-											passed ? 'font-semibold' : 'font-normal text-skin-muted'
-										}`}
-									>
-										{text}
-									</p>
-								</div>
-							);
-						})}
+								);
+							}
+						)}
 					</div>
 				</div>
 			</div>
@@ -765,8 +889,7 @@ const Home = ({
 								? {
 										address: metamaskAddress,
 										balance:
-											metaMaskNetworkMatchesFromNetwork ||
-											metaMaskNetworkMatchesToNetwork
+											metaMaskNetworkMatchesFromNetwork || metaMaskNetworkMatchesToNetwork
 												? metaMaskNativeAssetBalance
 													? roundDownTo6Decimals(metaMaskNativeAssetBalance)
 													: '...'
@@ -782,15 +905,10 @@ const Home = ({
 								: {
 										address: vcInstance?.accounts[0],
 										// `() => vcInstance?.killSession()` doesn't work by itself for some reason
-										logOut:
-											vcInstance?.killSession &&
-											(() => vcInstance.killSession()),
+										logOut: vcInstance?.killSession && (() => vcInstance.killSession()),
 										balance: viteBalanceInfo
 											? roundDownTo6Decimals(
-													getViteTokenBalance(
-														viteBalanceInfo,
-														constant.Vite_TokenId
-													)
+													getViteTokenBalance(viteBalanceInfo, constant.Vite_TokenId)
 											  )
 											: '...',
 										addressExplorerURL: `https://${
@@ -838,8 +956,7 @@ const Home = ({
 										<div className="h-[1px] my-5 bg-skin-line-divider" />
 										<div className="xy justify-between text-xs font-normal">
 											<p className="flex-1">
-												{platform} {i18n.address} :{' '}
-												{shortenAddress(wallet.address)}
+												{platform} {i18n.address} : {shortenAddress(wallet.address)}
 											</p>
 											<div className="xy gap-1 text-skin-muted">
 												<button onClick={() => copyWithToast(wallet.address)}>
@@ -874,37 +991,21 @@ const Home = ({
 					<div className="bg-skin-middleground p-7 space-y-4">
 						<div className="shadow-skin-base flex justify-between p-5">
 							<div className="space-y-2">
-								<p className="text-sm font-semibold">
-									{i18n.from.toUpperCase()}
-								</p>
-								<p className="text-sm font-normal text-skin-muted">
-									{channelFrom!.desc}
-								</p>
-								<img
-									src={channelFrom!.icon}
-									alt={channelFrom!.desc}
-									className="w-8"
-								/>
+								<p className="text-sm font-semibold">{i18n.from.toUpperCase()}</p>
+								<p className="text-sm font-normal text-skin-muted">{channelFrom.desc}</p>
+								<img src={channelFrom.icon} alt={channelFrom.desc} className="w-8" />
 							</div>
 							<div className="space-y-2">
 								<p className="text-sm font-semibold">{i18n.to.toUpperCase()}</p>
-								<p className="text-sm font-normal text-skin-muted">
-									{channelTo!.desc}
-								</p>
-								<img
-									src={channelTo!.icon}
-									alt={channelTo!.desc}
-									className="w-8"
-								/>
+								<p className="text-sm font-normal text-skin-muted">{channelTo.desc}</p>
+								<img src={channelTo.icon} alt={channelTo.desc} className="w-8" />
 							</div>
 						</div>
 						<p className="text-skin-muted font-normal text-sm">
-							{i18n.asset}:
-							<span className="text-skin-base ml-3">{asset.token}</span>
+							{i18n.asset}:<span className="text-skin-base ml-3">{asset.token}</span>
 						</p>
 						<p className="text-skin-muted font-normal text-sm truncate">
-							{i18n.destination}:
-							<span className="text-skin-base ml-3">{destinationAddress}</span>
+							{i18n.destination}:<span className="text-skin-base ml-3">{destinationAddress}</span>
 						</p>
 						<p className="text-skin-muted font-normal text-sm">
 							{i18n.youWillReceive}:
@@ -914,15 +1015,10 @@ const Home = ({
 						</p>
 						<div className="bg-skin-reminder px-5 py-4">
 							<p className="text-sm font-normal">
-								{
-									i18n.theTransactionFeesAreSubjectToNetworkConditionsAndMayChange
-								}
+								{i18n.theTransactionFeesAreSubjectToNetworkConditionsAndMayChange}
 							</p>
 						</div>
-						<Checkbox
-							checked={agreesToTerms}
-							onUserInput={(b) => agreesToTermsSet(b)}
-						>
+						<Checkbox checked={agreesToTerms} onUserInput={(b) => agreesToTermsSet(b)}>
 							{i18n.iHaveReadAndAgreeToThe}{' '}
 							<A href="TODO: get terms link" className="text-skin-highlight">
 								{i18n.termsOfUse}.
@@ -946,9 +1042,7 @@ const Home = ({
 					className="w-full max-w-lg"
 				>
 					<div className="p-6 bg-skin-viteconnect-confirm">
-						<p className="font-normal">
-							{i18n.pleaseConfirmTransactionOnViteWalletApp}
-						</p>
+						<p className="font-normal">{i18n.pleaseConfirmTransactionOnViteWalletApp}</p>
 					</div>
 					<div className="bg-skin-middleground space-y-7 p-7">
 						<div className="xy">
@@ -1005,14 +1099,14 @@ const Home = ({
 						<div className="flex-1 space-y-6">
 							{[
 								[
-									channelFrom!.icon,
+									channelFrom.icon,
 									channelFrom,
 									fromAddress,
 									bridgeTransaction?.fromHash,
 									bridgeTransaction?.fromHashConfirmationNums,
 								],
 								[
-									channelTo!.icon,
+									channelTo.icon,
 									channelTo,
 									destinationAddress,
 									bridgeTransaction?.toHash,
@@ -1039,18 +1133,14 @@ const Home = ({
 												</button>
 											) : (
 												<div className="fx gap-2">
-													<p className="text-skin-pending-green">
-														{i18n.pending}
-													</p>
+													<p className="text-skin-pending-green">{i18n.pending}</p>
 													<PendingDots />
 												</div>
 											)}
 											<p>
 												{confirmations >= channel.confirmedThreshold
 													? i18n.confirmed
-													: `(${confirmations || 0} / ${
-															channel.confirmedThreshold
-													  })`}
+													: `(${confirmations || 0} / ${channel.confirmedThreshold})`}
 											</p>
 										</div>
 									</div>
