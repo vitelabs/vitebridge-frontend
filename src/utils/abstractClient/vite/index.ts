@@ -3,7 +3,6 @@ import { Buffer } from 'buffer/'; // note: the trailing slash is important!
 import _viteAbi from './channel.vite.abi.json';
 import offChainCode from './offChainCode';
 import { VC } from '../../viteConnect';
-import { ViteAPI } from '@vite/vitejs/distSrc/viteAPI/type';
 import { Transaction as ViteTransaction } from '@vite/vitejs/distSrc/accountBlock/type';
 
 export class ViteChannel {
@@ -44,25 +43,4 @@ export class ViteChannel {
 
 		return this.vcInstance.signAndSendTx([{ block }]) as Promise<ViteTransaction>;
 	}
-}
-
-async function readContract(
-	viteApi: ViteAPI,
-	to: string,
-	abi: Array<{ name: string; type: string }>,
-	code: string,
-	methodName: string,
-	params: any[]
-) {
-	const methodAbi = abi.find((x) => x.type === 'offchain' && x.name === methodName);
-	if (!methodAbi) {
-		throw new Error(`method not found: ${methodName}`);
-	}
-
-	return viteApi.callOffChainContract({
-		address: to,
-		abi: methodAbi,
-		code: code,
-		params: params,
-	});
 }

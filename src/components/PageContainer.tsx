@@ -12,20 +12,14 @@ type Props = State & {
 	children: ReactNode;
 };
 
-const PageContainer = ({
-	setState,
-	languageType,
-	networkType,
-	i18n,
-	children,
-}: Props) => {
+const PageContainer = ({ setState, languageType, networkType, i18n, children }: Props) => {
 	const { pathname } = useLocation();
 
 	useEffect(() => {
 		import(`../i18n/${languageType}.ts`).then((translation) => {
 			setState({ i18n: translation.default });
 		});
-	}, [languageType]); // eslint-disable-next-line
+	}, [languageType]); // eslint-disable-line
 
 	return !i18n ? null : (
 		<div className="min-h-screen">

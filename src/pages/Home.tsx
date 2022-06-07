@@ -298,6 +298,7 @@ const Home = ({
 					fromAddress,
 					channelFromContractAddress
 				);
+				// https://ethereum.org/hr/developers/tutorials/erc20-annotated-code/
 				const approved = +allowance.toString() >= +amountInSmallestUnit;
 				if (!approved) {
 					await channelFromERC20Contract.approve(channelFromContractAddress, amountInSmallestUnit);
@@ -308,6 +309,7 @@ const Home = ({
 					ethersProvider.getSigner()
 				);
 				const originAddr = `0x${wallet.getOriginalAddressFromAddress(destinationAddress)}`;
+				console.log('originAddr:', originAddr);
 				ethToViteInputTx = await erc20Channel.input(
 					channelFromId,
 					originAddr,
@@ -352,7 +354,7 @@ const Home = ({
 				});
 				confirmingViteConnectSet(true);
 				let viteToEthInputSendTx = await viteChannel.input(
-					channelFromId!,
+					channelFromId,
 					destinationAddress,
 					amountInSmallestUnit
 				);
@@ -380,6 +382,7 @@ const Home = ({
 			};
 			let fromConfirmed = false;
 			let toConfirmed = false;
+			console.log('ethToViteOutputHash:', ethToViteOutputHash!);
 			while (true) {
 				fromConfirmed = (bridgeTx.fromHashConfirmationNums || 0) >= channelFrom.confirmedThreshold;
 				if (ethToViteInputTx!) {
@@ -388,51 +391,47 @@ const Home = ({
 							const currentNumber = await ethersProvider!.getBlockNumber();
 							bridgeTx.fromHashConfirmationNums = currentNumber - ethToViteInputTx.blockNumber;
 						}
-
-						//  ethToViteOutputTx = await viteApi.request(
-						//  	'ledger_getLatestAccountBlock',
-						//  	'vite_e94c882e6d3905ac212440b47bcdfdd1d2730610c11213d067'
-						//  );
 					}
-					console.log('ethToViteOutputHash:', ethToViteOutputHash!);
-					// const block = await viteApi.request(
-					// 	'ledger_getLatestAccountBlock',
-					// 	'' + channelTo.channelId
-					// );
-					// console.log('block:', block);
-
-					// const output = {
-					// 	channelId: channelTo.channelId,
-					// 	outputHash: ethToViteOutputHash!,
-					// 	outputId: channelFrom.channelId, // NOTE: assume outputId is channelFrom.channelId
-					// };
-					// console.log('output:', output);
-					// const channel = await query(viteApi, ____channelAbi, channelTo.contract, 'channels', [
-					// 	output.channelId + '',
-					// ]);
-					// console.log('channel:', channel);
-					// if (+channel?.[2].toString() >= output.outputId) {
-					// 	const events = await getPastEvents(
-					// 		viteApi,
-					// 		channelTo.contract,
-					// 		____channelAbi,
-					// 		'Output',
-					// 		{
-					// 			fromHeight: +block.height - 10 < 0 ? 1 : +block.height - 10,
-					// 			toHeight: 0,
-					// 		}
-					// 	);
-					// 	console.log('events', events);
-					// 	const originalHash = output.outputHash.replace('0x', '');
-					// 	const event = events.find((e) => e.returnValues['outputHash'] === originalHash);
-					// 	if (event) {
-					// 		const block = await viteApi.request(
-					// 			'ledger_getAccountBlockByHash',
-					// 			event.accountBlockHash
-					// 		);
-					// 		console.log('confirmations:', block.confirmations);
-					// 	}
-					// }
+					if (!bridgeTx.toHash) {
+						ethToViteOutputTx = await viteApi.request(
+							'ledger_getLatestAccountBlock',
+							channelTo.contract
+						);
+						const output = {
+							channelId: channelTo.channelId,
+							outputHash: ethToViteOutputHash!,
+							outputId: channelFrom.channelId, // NOTE: assume outputId is channelFrom.channelId
+						};
+						const channel = await query(viteApi, ____channelAbi, channelTo.contract, 'channels', [
+							output.channelId + '',
+						]);
+						if (+channel?.[2].toString() >= output.outputId) {
+							const events = await getPastEvents(
+								viteApi,
+								channelTo.contract,
+								____channelAbi,
+								'Output',
+								{
+									fromHeight:
+										+ethToViteOutputTx.height - 10 < 0 ? 1 : +ethToViteOutputTx.height - 10,
+									toHeight: 0,
+								}
+							);
+							const originalHash = output.outputHash.replace('0x', '');
+							const event = events.find((e) => e.returnValues['outputHash'] === originalHash);
+							if (event) {
+								bridgeTx.toHash = event.accountBlockHash;
+								const block = await viteApi.request(
+									'ledger_getAccountBlockByHash',
+									event.accountBlockHash
+								);
+								bridgeTx.toHashConfirmationNums = block.confirmations;
+							}
+						}
+					} else {
+						const block = await viteApi.request('ledger_getAccountBlockByHash', bridgeTx.toHash);
+						bridgeTx.toHashConfirmationNums = block.confirmations;
+					}
 				} else if (viteToEthInputReceiveTx!) {
 					// viteToEthInputReceiveTx = await viteApi.request(
 					// 	'ledger_getAccountBlockByHash',
@@ -503,7 +502,6 @@ const Home = ({
 		channelFromId,
 		i18n,
 		viteApi,
-		networkType,
 		channelFromContractAddress,
 		amount,
 		ethersProvider,
@@ -572,12 +570,6 @@ const Home = ({
 				.catch((e: any) => setState({ toast: String(e) }));
 		}
 	}, [metaMaskChainId, ethersProvider, metamaskAddress, networkType]); // eslint-disable-line
-
-	useEffect(() => {
-		if (channelFrom?.network === 'BSC' || channelFrom?.network === 'ETH') {
-			checkIfMetaMaskNeedsToChangeNetwork();
-		}
-	}, [channelFrom, checkIfMetaMaskNeedsToChangeNetwork]);
 
 	return (
 		<div className="m-5 xy flex-col lg:flex-row lg:items-start lg:justify-center">
@@ -718,99 +710,6 @@ const Home = ({
 						className=""
 						onClick={async () => {
 							console.log('???');
-							// parsedEvents
-							// [
-							// 	{
-							// 		eventFragment: {
-							// 			name: 'Input',
-							// 			anonymous: false,
-							// 			inputs: [
-							// 				{
-							// 					name: 'channelId',
-							// 					type: 'uint256',
-							// 					indexed: null,
-							// 					components: null,
-							// 					arrayLength: null,
-							// 					arrayChildren: null,
-							// 					baseType: 'uint256',
-							// 					_isParamType: true,
-							// 				},
-							// 				{
-							// 					name: 'index',
-							// 					type: 'uint256',
-							// 					indexed: null,
-							// 					components: null,
-							// 					arrayLength: null,
-							// 					arrayChildren: null,
-							// 					baseType: 'uint256',
-							// 					_isParamType: true,
-							// 				},
-							// 				{
-							// 					name: 'inputHash',
-							// 					type: 'bytes32',
-							// 					indexed: null,
-							// 					components: null,
-							// 					arrayLength: null,
-							// 					arrayChildren: null,
-							// 					baseType: 'bytes32',
-							// 					_isParamType: true,
-							// 				},
-							// 				{
-							// 					name: 'dest',
-							// 					type: 'bytes',
-							// 					indexed: null,
-							// 					components: null,
-							// 					arrayLength: null,
-							// 					arrayChildren: null,
-							// 					baseType: 'bytes',
-							// 					_isParamType: true,
-							// 				},
-							// 				{
-							// 					name: 'value',
-							// 					type: 'uint256',
-							// 					indexed: null,
-							// 					components: null,
-							// 					arrayLength: null,
-							// 					arrayChildren: null,
-							// 					baseType: 'uint256',
-							// 					_isParamType: true,
-							// 				},
-							// 				{
-							// 					name: 'from',
-							// 					type: 'address',
-							// 					indexed: null,
-							// 					components: null,
-							// 					arrayLength: null,
-							// 					arrayChildren: null,
-							// 					baseType: 'address',
-							// 					_isParamType: true,
-							// 				},
-							// 			],
-							// 			type: 'event',
-							// 			_isFragment: true,
-							// 		},
-							// 		name: 'Input',
-							// 		signature: 'Input(uint256,uint256,bytes32,bytes,uint256,address)',
-							// 		topic: '0x7b3c301d06629043d2b3ab060ac28904a2486a88941fe2d08d81d2efdc40cd5d',
-							// 		args: [
-							// 			{
-							// 				type: 'BigNumber',
-							// 				hex: '0x01',
-							// 			},
-							// 			{
-							// 				type: 'BigNumber',
-							// 				hex: '0x07',
-							// 			},
-							// 			'0xdbbab2994aaf1189c0316523c21bacc18550a35b36d53c8b686a077806919ace',
-							// 			'0xf30697191707a723c70d0652ab80304195e5928d00',
-							// 			{
-							// 				type: 'BigNumber',
-							// 				hex: '0x016345785d8a0000',
-							// 			},
-							// 			'0xF1e262E23E90F2b1f7A77FeD8d2E2aaF1e518f3F',
-							// 		],
-							// 	},
-							// ];
 						}}
 					>
 						teste

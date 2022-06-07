@@ -1,32 +1,27 @@
 import Connector from '@vite/connector';
+import { PROD } from './constants';
 
 export const VCSessionKey = 'vcSession';
 
 export class VC extends Connector {
 	constructor(session?: object, meta?: { session: object; bridge: string }) {
 		super(session, meta);
-		this.on(
-			'connect',
-			(err: Error, payload: { params: [{ accounts: string[] }] }) => {
-				const { accounts } = payload.params[0];
-				this.setAccState(accounts);
-			}
-		);
+		this.on('connect', (err: Error, payload: { params: [{ accounts: string[] }] }) => {
+			const { accounts } = payload.params[0];
+			this.setAccState(accounts);
+		});
 		this.on('disconnect', () => {
 			this.stopBizHeartBeat(); // stop heart beat when disconnected
 			localStorage.removeItem(VCSessionKey);
 		});
-		this.on(
-			'session_update',
-			(update: null | { session: { accounts: string[] } }) => {
-				if (update) {
-					const { session } = update;
-					if (session && session.accounts) {
-						this.setAccState(session.accounts);
-					}
+		this.on('session_update', (update: null | { session: { accounts: string[] } }) => {
+			if (update) {
+				const { session } = update;
+				if (session && session.accounts) {
+					this.setAccState(session.accounts);
 				}
 			}
-		);
+		});
 	}
 
 	setAccState(accounts: string[] = []) {
@@ -72,7 +67,8 @@ export function getValidVCSession() {
 	}
 	if (sessionData && sessionData.timestamp) {
 		// 60 minutes
-		if (new Date().getTime() - sessionData.timestamp < 1000 * 60 * 10) {
+		if (new Date().getTime() - sessionData.timestamp < 1000 * 60 * (PROD ? 1000 : 10)) {
+			// so u don't have to keep connecting during development
 			// console.log('Found session on localStorage.');
 			session = sessionData.session;
 		} else {

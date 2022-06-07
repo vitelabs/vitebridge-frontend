@@ -78,8 +78,7 @@ export const query = async (
 	}
 
 	let data = abiUtil.encodeFunctionCall(methodAbi, params);
-	let dataBase64 = Buffer.from(data, 'hex').toString('base64');
-	let codeBase64;
+	let dataBase64 = utils._Buffer.from(data, 'hex').toString('base64');
 	while (true) {
 		let result = await viteApi.request('contract_query', {
 			address,
@@ -88,7 +87,7 @@ export const query = async (
 
 		// parse result
 		if (result) {
-			let resultBytes = Buffer.from(result, 'base64').toString('hex');
+			let resultBytes = utils._Buffer.from(result, 'base64').toString('hex');
 			let outputs = [];
 			for (let i = 0; i < methodAbi.outputs.length; i++) {
 				outputs.push(methodAbi.outputs[i].type);
