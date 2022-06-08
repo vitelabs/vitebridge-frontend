@@ -3,7 +3,7 @@ import { qrcode, modes, ecLevel } from 'qrcode.es';
 import logo from '../assets/start_qrcode_icon.svg';
 
 const defaultOptions = {
-	size: 240, //300
+	size: 240,
 	ecLevel: ecLevel.HIGH,
 	minVersion: 12, // 4, // has to be at least 12 or else I get `code length overflow`
 	background: '#fff',

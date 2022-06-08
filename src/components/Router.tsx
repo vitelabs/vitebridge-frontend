@@ -76,7 +76,7 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 		}
 	}, [setState, getBalanceInfo, vcInstance]);
 
-	useEffect(updateViteBalanceInfo, [vcInstance?.accounts[0]]); // eslint-disable-line
+	useEffect(() => updateViteBalanceInfo(), [vcInstance?.accounts[0]]); // eslint-disable-line
 
 	useEffect(() => {
 		if (vcInstance) {

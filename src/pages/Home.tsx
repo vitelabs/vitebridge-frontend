@@ -282,9 +282,9 @@ const Home = ({
 		walletPromptLoadingSet(true);
 
 		let ethToViteInputTx: ethers.providers.TransactionResponse;
-		let ethToViteOutputTx: ViteTransaction;
+		let ethToViteOutputSendTx: ViteTransaction;
 		let viteToEthInputReceiveTx: ViteTransaction;
-		let viteToEthOutputTx: ethers.providers.TransactionResponse;
+		let viteToEthOutputTxHash: string;
 		let ethToViteOutputHash: string;
 		try {
 			const amountInSmallestUnit = toSmallestUnit(amount, channelFrom.decimals);
@@ -309,7 +309,6 @@ const Home = ({
 					ethersProvider.getSigner()
 				);
 				const originAddr = `0x${wallet.getOriginalAddressFromAddress(destinationAddress)}`;
-				console.log('originAddr:', originAddr);
 				ethToViteInputTx = await erc20Channel.input(
 					channelFromId,
 					originAddr,
@@ -335,11 +334,6 @@ const Home = ({
 					address: channelFromContractAddress,
 					topics: [ethers.utils.id('Input(uint256,uint256,bytes32,bytes,uint256,address)')],
 				});
-				// console.log(
-				// 	`channelId:${events[0].args.channelId.toString()}, inputHash:${
-				// 		events[0].args.inputHash
-				// 	}, inputId:${events[0].args.index.toString()}`
-				// );
 				let abi = [
 					'event Input(uint256 channelId, uint256 index, bytes32 inputHash, bytes dest, uint256 value, address from)',
 				];
@@ -375,6 +369,15 @@ const Home = ({
 					'ledger_getAccountBlockByHash',
 					viteToEthInputSendTx.receiveBlockHash
 				);
+
+				const events = await getPastEvents(viteApi, channelFrom.contract, ____channelAbi, 'Input', {
+					fromHeight: +viteToEthInputReceiveTx.height,
+					toHeight: 0,
+				});
+				if (events && events.length > 0) {
+					viteToEthOutputTxHash = '0x' + events[0].returnValues.inputHash;
+					console.log('viteToEthOutputTxHash:', viteToEthOutputTxHash);
+				}
 			}
 
 			let bridgeTx: Partial<BridgeTransaction> = {
@@ -382,7 +385,6 @@ const Home = ({
 			};
 			let fromConfirmed = false;
 			let toConfirmed = false;
-			console.log('ethToViteOutputHash:', ethToViteOutputHash!);
 			while (true) {
 				fromConfirmed = (bridgeTx.fromHashConfirmationNums || 0) >= channelFrom.confirmedThreshold;
 				if (ethToViteInputTx!) {
@@ -393,7 +395,7 @@ const Home = ({
 						}
 					}
 					if (!bridgeTx.toHash) {
-						ethToViteOutputTx = await viteApi.request(
+						ethToViteOutputSendTx = await viteApi.request(
 							'ledger_getLatestAccountBlock',
 							channelTo.contract
 						);
@@ -413,7 +415,7 @@ const Home = ({
 								'Output',
 								{
 									fromHeight:
-										+ethToViteOutputTx.height - 10 < 0 ? 1 : +ethToViteOutputTx.height - 10,
+										+ethToViteOutputSendTx.height - 10 < 0 ? 1 : +ethToViteOutputSendTx.height - 10,
 									toHeight: 0,
 								}
 							);
@@ -429,14 +431,11 @@ const Home = ({
 							}
 						}
 					} else {
-						const block = await viteApi.request('ledger_getAccountBlockByHash', bridgeTx.toHash);
-						bridgeTx.toHashConfirmationNums = block.confirmations;
+						bridgeTx.toHashConfirmationNums = (
+							await viteApi.request('ledger_getAccountBlockByHash', bridgeTx.toHash)
+						).confirmations;
 					}
 				} else if (viteToEthInputReceiveTx!) {
-					// viteToEthInputReceiveTx = await viteApi.request(
-					// 	'ledger_getAccountBlockByHash',
-					// 	viteToEthInputSendTx.hash
-					// );
 					// getPastEvents(viteApi, );
 					if (!fromConfirmed) {
 						viteToEthInputReceiveTx = await viteApi.request(
@@ -457,21 +456,17 @@ const Home = ({
 						currentNumber - 1000,
 						currentNumber
 					);
+					console.log('events:', events);
 					if (events && events.length > 0) {
-						// const output = {
-						// 	// ethChannelId: 1,
-						// 	outputHash: 'todo',
-						// 	// outputId: 1,
-						// };
-						// const target = events.filter((x) => {
-						// 	// @ts-ignore
-						// 	console.log(x.args.outputHash === output.outputHash);
-						// 	// @ts-ignore
-						// 	return x.args.outputHash === output.outputHash;
-						// });
-						// console.log('confirmations:', currentNumber - target[0].blockNumber);
-						// // console.log("confirmed number:", currentNumber - tx.blockNumber);
-						// bridgeTx.toHashConfirmationNums = currentNumber - target[0].blockNumber;
+						const target = events.filter((x) => {
+							// @ts-ignore
+							console.log(x.args.outputHash === viteToEthOutputTxHash);
+							// @ts-ignore
+							return x.args.outputHash === viteToEthOutputTxHash;
+						});
+						if (target) {
+							bridgeTx.toHashConfirmationNums = currentNumber - target[0].blockNumber;
+						}
 					}
 				}
 				fromConfirmed = (bridgeTx.fromHashConfirmationNums || 0) >= channelFrom.confirmedThreshold;
@@ -706,14 +701,6 @@ const Home = ({
 							{i18n.connect} {fromWallet}
 						</ConnectWalletButton>
 					)}
-					<button
-						className=""
-						onClick={async () => {
-							console.log('???');
-						}}
-					>
-						teste
-					</button>
 				</div>
 				<div>
 					<div className="relative flex w-full">

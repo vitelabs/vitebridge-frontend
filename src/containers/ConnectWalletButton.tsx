@@ -60,11 +60,9 @@ const ConnectWalletButton = ({
 			</button>
 			{connectURI && (
 				<Modal header="ViteConnect" onClose={() => connectURISet('')}>
-					<div className="p-5 text-sm font-semibold">
-						{i18n.scanTheQrCodeViaViteWalletApp}
-					</div>
+					<div className="p-5 text-sm font-semibold">{i18n.scanTheQrCodeViaViteWalletApp}</div>
 					<div className="px-20 pt-8 pb-10 xy">
-						<div className="h-64 w-64 bg-white p-2">
+						<div className="bg-white p-2">
 							<QR text={connectURI} />
 						</div>
 					</div>
