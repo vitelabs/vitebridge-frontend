@@ -906,7 +906,7 @@ const Home = ({
 						</div>
 						<Checkbox checked={agreesToTerms} onUserInput={(b) => agreesToTermsSet(b)}>
 							{i18n.iHaveReadAndAgreeToThe}{' '}
-							<A href="TODO: get terms link" className="text-skin-highlight">
+							<A href="https://vite.org/terms.html" className="text-skin-highlight">
 								{i18n.termsOfUse}.
 							</A>
 						</Checkbox>

@@ -52,7 +52,7 @@ export const viteBridgeAssets = {
 					{
 						network: 'ETH',
 						desc: 'ETH Rinkeby',
-						icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
+						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
 						contract: '0x649a886A441f3F956e6442E064C8958D191466a6',
 						erc20: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
 						// channel: 1,
