@@ -18,21 +18,6 @@ export const viteBridgeAssets = {
 			channels: [
 				[
 					{
-						network: 'BSC',
-						desc: 'BSC Testnet',
-						icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
-						contract: '0x78C18d3D5f86c9e3e14C13b8065018ACd0d76C11',
-						erc20: '0x84AEEa373eF0aCd04f94B15Aa36F4475A0ac6457',
-						channelId: 1,
-						decimals: 18,
-						confirmedThreshold: 10,
-						max: '5',
-						min: '0.1',
-						fee: {
-							fixed: '0',
-						},
-					},
-					{
 						network: 'VITE',
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
@@ -47,24 +32,23 @@ export const viteBridgeAssets = {
 							fixed: '0',
 						},
 					},
-				],
-				[
 					{
-						network: 'ETH',
-						desc: 'ETH Rinkeby',
-						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
-						contract: '0x649a886A441f3F956e6442E064C8958D191466a6',
-						erc20: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
-						// channel: 1,
+						network: 'BSC',
+						desc: 'BSC Testnet',
+						icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
+						contract: '0x78C18d3D5f86c9e3e14C13b8065018ACd0d76C11',
+						erc20: '0x84AEEa373eF0aCd04f94B15Aa36F4475A0ac6457',
 						channelId: 1,
 						decimals: 18,
 						confirmedThreshold: 10,
-						max: '10',
+						max: '5',
 						min: '0.1',
 						fee: {
 							fixed: '0',
 						},
 					},
+				],
+				[
 					{
 						network: 'VITE',
 						desc: 'Vite Testnet',
@@ -75,6 +59,22 @@ export const viteBridgeAssets = {
 						channelId: 0,
 						decimals: 18,
 						confirmedThreshold: 70,
+						max: '10',
+						min: '0.1',
+						fee: {
+							fixed: '0',
+						},
+					},
+					{
+						network: 'ETH',
+						desc: 'ETH Rinkeby',
+						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
+						contract: '0x649a886A441f3F956e6442E064C8958D191466a6',
+						erc20: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
+						// channel: 1,
+						channelId: 1,
+						decimals: 18,
+						confirmedThreshold: 10,
 						max: '10',
 						min: '0.1',
 						fee: {

@@ -77,7 +77,9 @@ const Home = ({
 		return flattenedChannels
 			.filter(({ network }, i) => !flattenedNetworks.includes(network, i + 1))
 			.map(({ icon, desc }) => ({ icon, label: desc }))
-			.sort((a, b) => (a.label.includes('Vite') ? -1 : a.label < b.label ? -1 : 1));
+			.sort((a, b) =>
+				a.label.includes('Vite') ? -1 : b.label.includes('Vite') ? 1 : a.label < b.label ? -1 : 1
+			);
 	}, [asset.channels]);
 	const fromNetworkOptions = useMemo(() => {
 		// Show all possible networks.
@@ -119,7 +121,6 @@ const Home = ({
 		() => (channelFrom.network === 'VITE' ? vcInstance?.accounts?.[0] : metamaskAddress) || '',
 		[channelFrom, vcInstance, metamaskAddress]
 	);
-	const channelFromContractAddress = useMemo(() => channelFrom.contract, [channelFrom]);
 	const showEthWallet = useMemo(
 		() => channelFrom?.network === 'ETH' || channelTo?.network === 'ETH',
 		[channelFrom, channelTo]
@@ -232,17 +233,54 @@ const Home = ({
 					isWrongNetwork = true;
 				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
 					setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToRinkebyTestnet,
+						toast: i18n.switchTheNetworkInYourMetaMaskWalletToRinkebyTestNetwork,
+					});
+					isWrongNetwork = true;
+				}
+			}
+			if (isWrongNetwork) {
+				metaMaskNativeAssetBalanceSet('');
+			}
+		} else {
+			// assume toWallet is MetaMask
+			if (channelTo.network === 'BSC') {
+				if (networkType === 'mainnet' && !metaMaskNetworkMatchesToNetwork) {
+					setState({
+						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscMainnet,
+					});
+					isWrongNetwork = true;
+				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesToNetwork) {
+					setState({
+						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscTestnet,
+					});
+					isWrongNetwork = true;
+				}
+			} else if (channelTo.network === 'ETH') {
+				if (networkType === 'mainnet' && !metaMaskNetworkMatchesToNetwork) {
+					setState({
+						toast: i18n.switchTheNetworkInYourMetaMaskWalletToEthMainnet,
+					});
+					isWrongNetwork = true;
+				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesToNetwork) {
+					setState({
+						toast: i18n.switchTheNetworkInYourMetaMaskWalletToRinkebyTestNetwork,
 					});
 					isWrongNetwork = true;
 				}
 			}
 		}
-		if (isWrongNetwork) {
-			metaMaskNativeAssetBalanceSet('');
-		}
+
 		return isWrongNetwork;
-	}, [setState, fromWallet, channelFrom, networkType, metaMaskNetworkMatchesFromNetwork, i18n]); // eslint-disable-line
+	}, [
+		setState,
+		fromWallet,
+		channelFrom,
+		channelTo,
+		networkType,
+		metaMaskNetworkMatchesFromNetwork,
+		metaMaskNetworkMatchesToNetwork,
+		i18n,
+	]);
 
 	const openBridgeConfirmationModal = useCallback(async () => {
 		if (checkIfMetaMaskNeedsToChangeNetwork()) {
@@ -296,15 +334,15 @@ const Home = ({
 				// TODO: come up with better names for allowance and approved
 				const allowance = await channelFromERC20Contract.allowance(
 					fromAddress,
-					channelFromContractAddress
+					channelFrom.contract
 				);
 				// https://ethereum.org/hr/developers/tutorials/erc20-annotated-code/
 				const approved = +allowance.toString() >= +amountInSmallestUnit;
 				if (!approved) {
-					await channelFromERC20Contract.approve(channelFromContractAddress, amountInSmallestUnit);
+					await channelFromERC20Contract.approve(channelFrom.contract, amountInSmallestUnit);
 				}
 				const erc20Channel = new ethers.Contract(
-					channelFromContractAddress,
+					channelFrom.contract,
 					____channelAbi,
 					ethersProvider.getSigner()
 				);
@@ -331,7 +369,7 @@ const Home = ({
 				const events = await ethersProvider!.getLogs({
 					fromBlock: ethToViteInputTx.blockNumber,
 					toBlock: ethToViteInputTx.blockNumber,
-					address: channelFromContractAddress,
+					address: channelFrom.contract,
 					topics: [ethers.utils.id('Input(uint256,uint256,bytes32,bytes,uint256,address)')],
 				});
 				let abi = [
@@ -343,7 +381,7 @@ const Home = ({
 			} else if (channelFrom.network === 'VITE' && vcInstance) {
 				const viteChannel = new ViteChannel({
 					vcInstance,
-					address: channelFromContractAddress,
+					address: channelFrom.contract,
 					tokenId: channelFrom.tokenId!,
 				});
 				confirmingViteConnectSet(true);
@@ -376,7 +414,6 @@ const Home = ({
 				});
 				if (events && events.length > 0) {
 					viteToEthOutputTxHash = '0x' + events[0].returnValues.inputHash;
-					console.log('viteToEthOutputTxHash:', viteToEthOutputTxHash);
 				}
 			}
 
@@ -436,7 +473,6 @@ const Home = ({
 						).confirmations;
 					}
 				} else if (viteToEthInputReceiveTx!) {
-					// getPastEvents(viteApi, );
 					if (!fromConfirmed) {
 						viteToEthInputReceiveTx = await viteApi.request(
 							'ledger_getAccountBlockByHash',
@@ -445,27 +481,30 @@ const Home = ({
 						bridgeTx.fromHashConfirmationNums = +viteToEthInputReceiveTx.confirmations!;
 					}
 					const currentNumber = await ethersProvider!.getBlockNumber();
-					// NOTE: This assumes the channelTo is compatible with ethers
-					const erc20Channel = new ethers.Contract(
-						channelTo.contract,
-						____channelAbi,
-						ethersProvider!.getSigner()
-					);
-					const events = await erc20Channel.queryFilter(
-						erc20Channel.filters.Output(null, null, null, null, null),
-						currentNumber - 1000,
-						currentNumber
-					);
-					console.log('events:', events);
-					if (events && events.length > 0) {
-						const target = events.filter((x) => {
-							// @ts-ignore
-							console.log(x.args.outputHash === viteToEthOutputTxHash);
-							// @ts-ignore
-							return x.args.outputHash === viteToEthOutputTxHash;
+					if (!bridgeTx.toHash) {
+						const events = await ethersProvider!.getLogs({
+							fromBlock: currentNumber - 1000,
+							toBlock: currentNumber,
+							address: channelTo.contract,
+							topics: [ethers.utils.id('Output(uint256,uint256,bytes32,address,uint256)')],
 						});
-						if (target) {
-							bridgeTx.toHashConfirmationNums = currentNumber - target[0].blockNumber;
+						let abi = [
+							'event Output(uint256 channelId, uint256 index, bytes32 outputHash, address dest, uint256 value)',
+						];
+						let iface = new ethers.utils.Interface(abi);
+						let parsedEvents = events.map((log) => iface.parseLog(log));
+						console.log('parsedEvents:', parsedEvents);
+						if (parsedEvents.length) {
+							const target =
+								events[parsedEvents.findIndex((x) => x.args.outputHash === viteToEthOutputTxHash)];
+							if (target) {
+								bridgeTx.toHash = target.transactionHash;
+							}
+						}
+					} else {
+						const viteToEthOutputTx = await ethersProvider!.getTransaction(bridgeTx.toHash);
+						if (viteToEthOutputTx?.blockNumber) {
+							bridgeTx.toHashConfirmationNums = currentNumber - viteToEthOutputTx.blockNumber;
 						}
 					}
 				}
@@ -491,13 +530,15 @@ const Home = ({
 				// usually { code: 11012, message: "User Canceled" }
 				// @ts-ignore
 				setState({ toast: { 11012: i18n.userCanceled }[e.code] || e.message });
+			} else {
+				setState({ toast: typeof e === 'object' ? JSON.stringify(e) : e });
 			}
 		}
 	}, [
 		channelFromId,
 		i18n,
 		viteApi,
-		channelFromContractAddress,
+		channelFrom.contract,
 		amount,
 		ethersProvider,
 		channelFrom,
@@ -514,7 +555,6 @@ const Home = ({
 		if (metaMaskIsSupported()) {
 			// @ts-ignore
 			window.ethereum.on('chainChanged', (chainId: string) => {
-				console.log('chainId:', chainId);
 				metaMaskChainIdSet(chainId);
 				metaMaskFromAssetBalanceSet(undefined);
 			});
@@ -654,7 +694,7 @@ const Home = ({
 								<div className="mt-3 border border-skin-muted dark:border-none bg-skin-input text-sm flex items-center rounded-sm">
 									<NumericalInput
 										value={amount}
-										onUserInput={(a) => amountSet(a.trim())}
+										onUserInput={(v) => amountSet(v.trim())}
 										className="flex-1 pl-3 py-1"
 										maxDecimals={18}
 									/>
@@ -672,7 +712,7 @@ const Home = ({
 								<p className="mb-3 text-xs font-semibold">{i18n.destinationAddress}</p>
 								<TextInput
 									value={destinationAddress}
-									onUserInput={(a) => destinationAddressSet(a.trim())}
+									onUserInput={(v) => destinationAddressSet(v.trim())}
 									className="border border-skin-muted dark:border-none bg-skin-input text-sm flex-1 pl-3 py-1 rounded-sm w-full"
 								/>
 							</div>

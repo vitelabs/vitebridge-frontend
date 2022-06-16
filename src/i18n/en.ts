@@ -32,8 +32,7 @@ const en = {
 	reminder: 'Reminder',
 	iHaveReadAndAgreeToThe: 'I have read and agree to the',
 	termsOfUse: 'Terms of Use',
-	pleaseConfirmTransactionOnViteWalletApp:
-		'Please confirm transaction on VITE Wallet App',
+	pleaseConfirmTransactionOnViteWalletApp: 'Please confirm transaction on VITE Wallet App',
 	close: 'Close',
 	userCanceled: 'User Canceled',
 	transactionConfirmationStatus: 'Transaction Confirmation Status',
@@ -48,8 +47,8 @@ const en = {
 		'Switch the network in your MetaMask wallet to BSC Testnet',
 	switchTheNetworkInYourMetaMaskWalletToEthMainnet:
 		'Switch the network in your MetaMask wallet to ETH Mainnet',
-	switchTheNetworkInYourMetaMaskWalletToRinkebyTestnet:
-		'Switch the network in your MetaMask wallet to Rinkeby Testnet',
+	switchTheNetworkInYourMetaMaskWalletToRinkebyTestNetwork:
+		'Switch the network in your MetaMask wallet to Rinkeby Test Network',
 	bridge: 'Bridge',
 	bugBounty: 'Bug Bounty',
 	tutorial: 'Tutorial',

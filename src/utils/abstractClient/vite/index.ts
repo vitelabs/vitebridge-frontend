@@ -21,9 +21,6 @@ export class ViteChannel {
 	}
 
 	async input(channelId: number, address: string, value: string) {
-		console.log('channelId:', channelId);
-		console.log('address:', address);
-		console.log('value:', value);
 		const methodName = 'input';
 		const methodAbi = this.viteChannelAbi.find(
 			(x) => x.name === methodName && x.type === 'function'
