@@ -390,6 +390,7 @@ const Home = ({
 					destinationAddress,
 					amountInSmallestUnit
 				);
+				console.log('test');
 				confirmingBridgeTxSet(false);
 				confirmingViteConnectSet(false);
 				transactionConfirmationStatusOpenSet(true);
@@ -537,7 +538,6 @@ const Home = ({
 		channelFromId,
 		i18n,
 		viteApi,
-		channelFrom.contract,
 		amount,
 		ethersProvider,
 		channelFrom,
