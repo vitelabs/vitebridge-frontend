@@ -483,7 +483,7 @@ const Home = ({
 					const currentNumber = await ethersProvider!.getBlockNumber();
 					if (!bridgeTx.toHash) {
 						const events = await ethersProvider!.getLogs({
-							fromBlock: currentNumber - 1000,
+							fromBlock: currentNumber - 100,
 							toBlock: currentNumber,
 							address: channelTo.contract,
 							topics: [ethers.utils.id('Output(uint256,uint256,bytes32,address,uint256)')],
@@ -493,7 +493,6 @@ const Home = ({
 						];
 						let iface = new ethers.utils.Interface(abi);
 						let parsedEvents = events.map((log) => iface.parseLog(log));
-						console.log('parsedEvents:', parsedEvents);
 						if (parsedEvents.length) {
 							const target =
 								events[parsedEvents.findIndex((x) => x.args.outputHash === viteToEthOutputTxHash)];
