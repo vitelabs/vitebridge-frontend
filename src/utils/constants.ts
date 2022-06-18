@@ -92,9 +92,10 @@ export const viteBridgeAssets = {
 					{
 						network: 'VITE',
 						desc: 'Vite Testnet',
-						icon: 'https://static.vite.net/crypto-info/tokens/autk/tti_b0de22e5d54c92c43c3a9e54.jpg',
+						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
 						contract: 'vite_44949d8b8fde6cd83c816d7f69581f781b68ca46cca72ec92c',
 						tokenId: 'tti_2ff7518e3ee12eb611f895fb',
+						// tokenId: 'tti_251a3e67a41b5ea2373936c8', // test tti doesn't cause error
 						channelId: 5,
 						decimals: 18,
 						confirmedThreshold: 70,
@@ -107,7 +108,7 @@ export const viteBridgeAssets = {
 					{
 						network: 'ETH',
 						desc: 'ETH Rinkeby',
-						icon: 'https://static.vite.net/token-profile-1257137467/icon/bf18cfa8342b44a8ff07ecb962f1e831.png',
+						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
 						contract: '0x649a886A441f3F956e6442E064C8958D191466a6',
 						erc20: '0xF45143E038E14925ea99AfeE74b7b456AD178fa8',
 						channelId: 8,

@@ -63,7 +63,7 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 			getBalanceInfo(vcInstance.accounts[0])
 				// @ts-ignore
 				.then((res: ViteBalanceInfo) => {
-					console.log('res:', res);
+					// console.log('res:', res);
 					setState({ viteBalanceInfo: res });
 				})
 				.catch((e) => {

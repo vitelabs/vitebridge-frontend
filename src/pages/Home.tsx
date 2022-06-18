@@ -523,7 +523,7 @@ const Home = ({
 				setState({ toast: i18n.bridgingTransactionComplete });
 			}
 		} catch (e: any) {
-			console.log('e:', e);
+			// console.log('e:', e);
 			walletPromptLoadingSet(false);
 			confirmingViteConnectSet(false);
 			if (e?.code) {
@@ -798,7 +798,6 @@ const Home = ({
 									token: 'ETH',
 									desc: 'Rinkeby',
 									walletType: 'MetaMask',
-									// TODO: update to eth icon
 									icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
 							  }
 							: {
