@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { wallet, constant } from '@vite/vitejs';
 import { ethers } from 'ethers';
 import Picker from '../components/Picker';
-import { chainIds, channelCombos, PROD, viteBridgeAssets } from '../utils/constants';
+import { chainInfo, channelCombos, PROD, viteBridgeAssets } from '../utils/constants';
 import { connect } from '../utils/global-context';
 import { useTitle } from '../utils/hooks';
 import { BridgeTransaction, State } from '../utils/types';
@@ -131,14 +131,15 @@ const Home = ({
 		() => (channelFrom.network === 'VITE' ? 'Vite Wallet' : 'MetaMask'),
 		[channelFrom]
 	);
+
 	const metaMaskNetworkMatchesFromNetwork = useMemo(
 		// @ts-ignore
-		() => metaMaskChainId === chainIds[channelFrom.desc],
+		() => metaMaskChainId === chainInfo[channelFrom.desc]?.id,
 		[metaMaskChainId, channelFrom]
 	);
 	const metaMaskNetworkMatchesToNetwork = useMemo(
 		// @ts-ignore
-		() => metaMaskChainId === chainIds[channelTo.desc],
+		() => metaMaskChainId === chainInfo[channelTo.desc]?.id,
 		[metaMaskChainId, channelTo]
 	);
 	const fromAssetBalance = useMemo(() => {
@@ -190,17 +191,27 @@ const Home = ({
 		}
 		return (stepsCompleted / 3) * 100;
 	}, [fromWalletConnected, channelFrom, channelTo, bridgeTransaction]);
-	const ethersProvider = useMemo(() => {
-		if (metaMaskIsSupported()) {
-			// @ts-ignore
-			return new ethers.providers.Web3Provider(window.ethereum);
+	const channelFromEthersProvider = useMemo(() => {
+		const url = chainInfo[channelFrom.desc]?.rpc;
+		if (url) {
+			return new ethers.providers.JsonRpcProvider(url);
 		}
-	}, [metaMaskChainId]); // eslint-disable-line
+	}, [channelFrom]);
+	const channelToEthersProvider = useMemo(() => {
+		const url = chainInfo[channelTo.desc]?.rpc;
+		if (url) {
+			return new ethers.providers.JsonRpcProvider(url);
+		}
+	}, [channelTo]);
 	const channelFromERC20Contract = useMemo(() => {
-		if (channelFrom.erc20 && ethersProvider) {
-			return new ethers.Contract(channelFrom.erc20, ____erc20Abi, ethersProvider.getSigner());
+		if (channelFrom.erc20 && channelFromEthersProvider) {
+			return new ethers.Contract(
+				channelFrom.erc20,
+				____erc20Abi,
+				channelFromEthersProvider.getSigner()
+			);
 		}
-	}, [channelFrom, ethersProvider]);
+	}, [channelFrom, channelFromEthersProvider]);
 
 	const copyWithToast = useCallback(
 		(text = '') => {
@@ -241,46 +252,10 @@ const Home = ({
 			if (isWrongNetwork) {
 				metaMaskNativeAssetBalanceSet('');
 			}
-		} else {
-			// assume toWallet is MetaMask
-			if (channelTo.network === 'BSC') {
-				if (networkType === 'mainnet' && !metaMaskNetworkMatchesToNetwork) {
-					setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscMainnet,
-					});
-					isWrongNetwork = true;
-				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesToNetwork) {
-					setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscTestnet,
-					});
-					isWrongNetwork = true;
-				}
-			} else if (channelTo.network === 'ETH') {
-				if (networkType === 'mainnet' && !metaMaskNetworkMatchesToNetwork) {
-					setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToEthMainnet,
-					});
-					isWrongNetwork = true;
-				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesToNetwork) {
-					setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToRinkebyTestNetwork,
-					});
-					isWrongNetwork = true;
-				}
-			}
 		}
 
 		return isWrongNetwork;
-	}, [
-		setState,
-		fromWallet,
-		channelFrom,
-		channelTo,
-		networkType,
-		metaMaskNetworkMatchesFromNetwork,
-		metaMaskNetworkMatchesToNetwork,
-		i18n,
-	]);
+	}, [setState, fromWallet, channelFrom, networkType, metaMaskNetworkMatchesFromNetwork, i18n]);
 
 	const openBridgeConfirmationModal = useCallback(async () => {
 		if (checkIfMetaMaskNeedsToChangeNetwork()) {
@@ -320,31 +295,27 @@ const Home = ({
 		walletPromptLoadingSet(true);
 
 		let ethToViteInputTx: ethers.providers.TransactionResponse;
-		let ethToViteOutputSendTx: ViteTransaction;
+		let ethToViteOutputSendTx: ViteTransaction; // | ethers.providers.TransactionResponse;
 		let viteToEthInputReceiveTx: ViteTransaction;
 		let viteToEthOutputTxHash: string;
 		let ethToViteOutputHash: string;
 		try {
 			const amountInSmallestUnit = toSmallestUnit(amount, channelFrom.decimals);
-			if (
-				(channelFrom.network === 'BSC' || channelFrom.network === 'ETH') &&
-				channelFromERC20Contract &&
-				ethersProvider
-			) {
+			if (fromWallet === 'MetaMask') {
 				// TODO: come up with better names for allowance and approved
-				const allowance = await channelFromERC20Contract.allowance(
+				const allowance = await channelFromERC20Contract!.allowance(
 					fromAddress,
 					channelFrom.contract
 				);
 				// https://ethereum.org/hr/developers/tutorials/erc20-annotated-code/
 				const approved = +allowance.toString() >= +amountInSmallestUnit;
 				if (!approved) {
-					await channelFromERC20Contract.approve(channelFrom.contract, amountInSmallestUnit);
+					await channelFromERC20Contract!.approve(channelFrom.contract, amountInSmallestUnit);
 				}
 				const erc20Channel = new ethers.Contract(
 					channelFrom.contract,
 					____channelAbi,
-					ethersProvider.getSigner()
+					channelFromEthersProvider!.getSigner()
 				);
 				const originAddr = `0x${wallet.getOriginalAddressFromAddress(destinationAddress)}`;
 				ethToViteInputTx = await erc20Channel.input(
@@ -362,11 +333,11 @@ const Home = ({
 				bridgeTxStatusModalOpen = true;
 				walletPromptLoadingSet(false);
 				while (true) {
-					ethToViteInputTx = await ethersProvider.getTransaction(ethToViteInputTx.hash);
+					ethToViteInputTx = await channelFromEthersProvider!.getTransaction(ethToViteInputTx.hash);
 					if (ethToViteInputTx.blockNumber) break;
 					await sleep(5000);
 				}
-				const events = await ethersProvider!.getLogs({
+				const events = await channelFromEthersProvider!.getLogs({
 					fromBlock: ethToViteInputTx.blockNumber,
 					toBlock: ethToViteInputTx.blockNumber,
 					address: channelFrom.contract,
@@ -378,9 +349,9 @@ const Home = ({
 				let iface = new ethers.utils.Interface(abi);
 				let parsedEvents = events.map((log) => iface.parseLog(log));
 				ethToViteOutputHash = parsedEvents[0].args.inputHash;
-			} else if (channelFrom.network === 'VITE' && vcInstance) {
+			} else {
 				const viteChannel = new ViteChannel({
-					vcInstance,
+					vcInstance: vcInstance!,
 					address: channelFrom.contract,
 					tokenId: channelFrom.tokenId!,
 				});
@@ -428,7 +399,7 @@ const Home = ({
 				if (ethToViteInputTx!) {
 					if (ethToViteInputTx.blockNumber) {
 						if (!fromConfirmed) {
-							const currentNumber = await ethersProvider!.getBlockNumber();
+							const currentNumber = await channelFromEthersProvider!.getBlockNumber();
 							bridgeTx.fromHashConfirmationNums = currentNumber - ethToViteInputTx.blockNumber;
 						}
 					}
@@ -481,9 +452,9 @@ const Home = ({
 						);
 						bridgeTx.fromHashConfirmationNums = +viteToEthInputReceiveTx.confirmations!;
 					}
-					const currentNumber = await ethersProvider!.getBlockNumber();
+					const currentNumber = await channelToEthersProvider!.getBlockNumber();
 					if (!bridgeTx.toHash) {
-						const events = await ethersProvider!.getLogs({
+						const events = await channelToEthersProvider!.getLogs({
 							fromBlock: currentNumber - 100,
 							toBlock: currentNumber,
 							address: channelTo.contract,
@@ -502,7 +473,9 @@ const Home = ({
 							}
 						}
 					} else {
-						const viteToEthOutputTx = await ethersProvider!.getTransaction(bridgeTx.toHash);
+						const viteToEthOutputTx = await channelToEthersProvider!.getTransaction(
+							bridgeTx.toHash
+						);
 						if (viteToEthOutputTx?.blockNumber) {
 							bridgeTx.toHashConfirmationNums = currentNumber - viteToEthOutputTx.blockNumber;
 						}
@@ -539,7 +512,9 @@ const Home = ({
 		i18n,
 		viteApi,
 		amount,
-		ethersProvider,
+		fromWallet,
+		channelFromEthersProvider,
+		channelToEthersProvider,
 		channelFrom,
 		channelTo,
 		destinationAddress,
@@ -597,13 +572,13 @@ const Home = ({
 	]);
 
 	useEffect(() => {
-		if (ethersProvider && metamaskAddress && networkType) {
-			ethersProvider
+		if (channelFromEthersProvider && metamaskAddress && networkType) {
+			channelFromEthersProvider
 				.getBalance(metamaskAddress)
 				.then((data) => metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data)))
 				.catch((e: any) => setState({ toast: String(e) }));
 		}
-	}, [metaMaskChainId, ethersProvider, metamaskAddress, networkType]); // eslint-disable-line
+	}, [metaMaskChainId, channelFromEthersProvider, metamaskAddress, networkType]); // eslint-disable-line
 
 	return (
 		<div className="m-5 xy flex-col lg:flex-row lg:items-start lg:justify-center">

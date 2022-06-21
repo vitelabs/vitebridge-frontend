@@ -1,16 +1,45 @@
 export const PROD = process.env.NODE_ENV === 'production';
 
 // https://chainlist.org/
-export const chainIds = {
+export const chainInfo: { [key: string]: { id: string; rpc: string } } = {
 	// 'Ethereum Mainnet': '0x1',
 	// 'Ropsten Testnet': '3', // for Ethereum
 	// 'BSC Mainnet': '56',
-	'BSC Testnet': '0x61', // Testnet(ChainID 0x61, 97 in decimal) https://docs.binance.org/smart-chain/developer/rpc.html
-	'ETH Rinkeby': '0x4',
+	'BSC Testnet': {
+		id: '0x61', // Testnet(ChainID 0x61, 97 in decimal) https://docs.binance.org/smart-chain/developer/rpc.html
+		rpc: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
+	},
+	'ETH Rinkeby': {
+		id: '0x4',
+		rpc: 'https://node.vite.net/eth/rinkeby',
+	},
+} as const;
+
+type Channel = {
+	network: 'VITE' | 'BSC' | 'ETH';
+	desc: 'Vite Testnet' | 'BSC Testnet' | 'ETH Rinkeby';
+	icon: string;
+	contract: string;
+	tokenId?: string;
+	erc20?: string;
+	channelId: number;
+	decimals: number;
+	confirmedThreshold: number;
+	max: string;
+	min: string;
+	fee: {
+		fixed: string;
+	};
 };
 
 // https://github.com/vitelabs/vite-asset-bridge/blob/vite-bridge-rinkeby-buidl-patch/meta.json
-export const viteBridgeAssets = {
+export const viteBridgeAssets: {
+	tokens: {
+		token: string;
+		icon: string;
+		channels: [Channel, Channel][];
+	}[];
+} = {
 	tokens: [
 		{
 			token: 'VITE',
@@ -85,7 +114,7 @@ export const viteBridgeAssets = {
 			],
 		},
 		{
-			token: 'USDV',
+			token: 'USDT',
 			icon: 'https://static.vite.net/crypto-info/tokens/autk/tti_b0de22e5d54c92c43c3a9e54.jpg',
 			channels: [
 				[
@@ -94,10 +123,9 @@ export const viteBridgeAssets = {
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
 						contract: 'vite_44949d8b8fde6cd83c816d7f69581f781b68ca46cca72ec92c',
-						tokenId: 'tti_2ff7518e3ee12eb611f895fb',
-						// tokenId: 'tti_251a3e67a41b5ea2373936c8', // test tti doesn't cause error
-						channelId: 5,
-						decimals: 18,
+						tokenId: 'tti_973afc9ffd18c4679de42e93',
+						channelId: 6,
+						decimals: 6,
 						confirmedThreshold: 70,
 						max: '5',
 						min: '0.1',
@@ -110,12 +138,12 @@ export const viteBridgeAssets = {
 						desc: 'ETH Rinkeby',
 						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
 						contract: '0x649a886A441f3F956e6442E064C8958D191466a6',
-						erc20: '0xF45143E038E14925ea99AfeE74b7b456AD178fa8',
-						channelId: 8,
+						erc20: '0x8990FFEa1f2856a6e4e89743cbE9742EaE1DbDa0',
+						channelId: 9,
 						decimals: 18,
 						confirmedThreshold: 10,
 						max: '5',
-						min: '0.1',
+						min: '0.01',
 						fee: {
 							fixed: '0',
 						},
