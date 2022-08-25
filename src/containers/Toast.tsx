@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { connect } from '../utils/global-context';
+import { connect } from '../utils/globalContext';
+import { isDarkMode } from '../utils/misc';
+import { makeReadable } from '../utils/strings';
 import { State } from '../utils/types';
 
 type Props = State;
@@ -33,8 +35,15 @@ const Toast = ({ setState, toast }: Props) => {
 							visible ? 'scale-1' : 'scale-0'
 						}`}
 					>
-						<div className="absolute top-0 left-0 h-full w-1 toast-line-gradient" />
-						<p className="text-sm">{toast}</p>
+						<div
+							className="absolute top-0 left-0 h-full w-1 toast-line-gradient"
+							style={{
+								background: isDarkMode()
+									? 'linear-gradient(138deg, #052ef5 0%, #0d6df0 31%, #0b92e7 49%, #0bb6eb 71%, #00e0f2 100%)'
+									: 'linear-gradient(136deg, rgba(84, 182, 255, 1) 0%, rgba(42, 127, 255, 1) 100%)',
+							}}
+						/>
+						<p className="text-sm">{makeReadable(toast)}</p>
 					</div>
 				</div>,
 				toastParent

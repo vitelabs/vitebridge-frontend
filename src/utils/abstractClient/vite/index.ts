@@ -4,15 +4,22 @@ import _viteAbi from './channel.vite.abi.json';
 import offChainCode from './offChainCode';
 import { VC } from '../../viteConnect';
 import { Transaction as ViteTransaction } from '@vite/vitejs/distSrc/accountBlock/type';
+// TODO: use the right type
 
 export class ViteChannel {
 	viteChannelAddress: string;
-	vcInstance: VC;
+	vpAddress?: string;
+	vcInstance?: VC;
 	viteChannelAbi: any[];
 	viteOffChainCode: any;
 	tokenId: string;
 
-	constructor(config: { vcInstance: VC; address: string; tokenId: string }) {
+	constructor(config: { vpAddress?: string; vcInstance?: VC; address: string; tokenId: string }) {
+		if (!config.vpAddress && !config.vcInstance) {
+			throw new Error('config.vpAddress or config.vcInstance must be provided');
+		}
+
+		this.vpAddress = config.vpAddress;
 		this.vcInstance = config.vcInstance;
 		this.viteChannelAbi = _viteAbi;
 		this.viteOffChainCode = Buffer.from(offChainCode, 'hex').toString('base64');
@@ -29,15 +36,22 @@ export class ViteChannel {
 			throw new Error(`method not found: ${methodName}`);
 		}
 
-		const block = await accountBlock.createAccountBlock('callContract', {
-			address: this.vcInstance.accounts[0],
-			abi: methodAbi,
-			toAddress: this.viteChannelAddress,
-			params: [channelId, address, value],
-			tokenId: this.tokenId,
-			amount: value,
-		}).accountBlock;
+		const params = [
+			'callContract',
+			{
+				address: this.vpAddress || this.vcInstance!.accounts[0],
+				abi: methodAbi,
+				toAddress: this.viteChannelAddress,
+				params: [channelId, address, value],
+				tokenId: this.tokenId,
+				amount: value,
+			},
+		] as const;
 
-		return this.vcInstance.signAndSendTx([{ block }]) as Promise<ViteTransaction>;
+		if (this.vcInstance) {
+			const block = await accountBlock.createAccountBlock(...params).accountBlock;
+			return this.vcInstance.signAndSendTx([{ block }]) as Promise<ViteTransaction>;
+		}
+		return window.vitePassport!.writeAccountBlock(...params);
 	}
 }

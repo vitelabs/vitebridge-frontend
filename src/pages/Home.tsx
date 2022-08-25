@@ -3,7 +3,7 @@ import { wallet, constant } from '@vite/vitejs';
 import { ethers } from 'ethers';
 import Picker from '../components/Picker';
 import { chainInfo, channelCombos, PROD, viteBridgeAssets } from '../utils/constants';
-import { connect } from '../utils/global-context';
+import { connect } from '../utils/globalContext';
 import { useTitle } from '../utils/hooks';
 import { BridgeTransaction, State } from '../utils/types';
 import transImageSrc from '../assets/trans.png';
@@ -36,6 +36,7 @@ import { getViteTokenBalance, metaMaskIsSupported } from '../utils/wallet';
 import Duplicate from '../assets/Duplicate';
 import { Transaction as ViteTransaction } from '@vite/vitejs/distSrc/accountBlock/type';
 import { getPastEvents, query } from '../utils/viteScripts';
+import { AccountBlockType } from '@vite/vitejs/distSrc/utils/type';
 
 const sleep = (ms = 0): Promise<void> => new Promise((res) => setTimeout(() => res(), ms));
 let bridgeTxStatusModalOpen = false;
@@ -46,7 +47,9 @@ const Home = ({
 	i18n,
 	metamaskAddress,
 	vcInstance,
+	vpAddress,
 	viteBalanceInfo,
+	activeViteAddress,
 	networkType,
 }: State) => {
 	useTitle('');
@@ -118,8 +121,8 @@ const Home = ({
 		return channelFrom?.channelId;
 	}, [channelFrom]);
 	const fromAddress = useMemo(
-		() => (channelFrom.network === 'VITE' ? vcInstance?.accounts?.[0] : metamaskAddress) || '',
-		[channelFrom, vcInstance, metamaskAddress]
+		() => (channelFrom.network === 'VITE' ? activeViteAddress : metamaskAddress) || '',
+		[channelFrom, activeViteAddress, metamaskAddress]
 	);
 	const showEthWallet = useMemo(
 		() => channelFrom?.network === 'ETH' || channelTo?.network === 'ETH',
@@ -170,11 +173,11 @@ const Home = ({
 	}, [fromAssetBalance, channelFrom]);
 	const fromWalletConnected = useMemo(() => {
 		if (fromWallet === 'Vite Wallet') {
-			return !!vcInstance;
+			return !!activeViteAddress;
 		} else {
 			return !!metamaskAddress;
 		}
-	}, [fromWallet, vcInstance, metamaskAddress]);
+	}, [fromWallet, activeViteAddress, metamaskAddress]);
 	const progressPercentage = useMemo(() => {
 		let stepsCompleted = 0;
 		if (fromWalletConnected) {
@@ -261,6 +264,23 @@ const Home = ({
 		if (checkIfMetaMaskNeedsToChangeNetwork()) {
 			return;
 		}
+		if (fromNetwork.label === 'Vite Testnet' && window.vitePassport && vpAddress) {
+			const activeViteNetwork = await window.vitePassport.getNetwork();
+			if (networkType === 'testnet') {
+				if (
+					activeViteNetwork.rpcUrl !== 'wss://buidl.vite.net/gvite/ws' &&
+					activeViteNetwork.rpcUrl !== 'https://buidl.vite.net/gvite'
+				) {
+					return setState({ toast: i18n.switchVitePassportNetworkToTestnet });
+				}
+			}
+			// else if (
+			// 	activeViteNetwork.rpcUrl !== 'wss://node.vite.net/gvite/ws' &&
+			// 	activeViteNetwork.rpcUrl !== 'https://node.vite.net/gvite'
+			// ) {
+			// 	return setState({ toast: i18n.switchVitePassportNetworkToMainnet });
+			// }
+		}
 
 		const num = +amount;
 		if (num < minAmount || num > maxAmount) {
@@ -277,6 +297,9 @@ const Home = ({
 		agreesToTermsSet(!PROD); // saves time during development
 		walletPromptLoadingSet(false);
 	}, [
+		networkType,
+		vpAddress,
+		fromNetwork.label,
 		checkIfMetaMaskNeedsToChangeNetwork,
 		amount,
 		channelTo,
@@ -351,12 +374,14 @@ const Home = ({
 				ethToViteOutputHash = parsedEvents[0].args.inputHash;
 			} else {
 				const viteChannel = new ViteChannel({
-					vcInstance: vcInstance!,
+					vpAddress,
+					vcInstance,
 					address: channelFrom.contract,
 					tokenId: channelFrom.tokenId!,
 				});
 				confirmingViteConnectSet(true);
-				let viteToEthInputSendTx = await viteChannel.input(
+				// TODO: use the right type
+				let viteToEthInputSendTx: Partial<AccountBlockType> = await viteChannel.input(
 					channelFromId,
 					destinationAddress,
 					amountInSmallestUnit
@@ -504,10 +529,11 @@ const Home = ({
 				// @ts-ignore
 				setState({ toast: { 11012: i18n.userCanceled }[e.code] || e.message });
 			} else {
-				setState({ toast: typeof e === 'object' ? JSON.stringify(e) : e });
+				setState({ toast: e });
 			}
 		}
 	}, [
+		vpAddress,
 		channelFromId,
 		i18n,
 		viteApi,
@@ -537,11 +563,11 @@ const Home = ({
 
 	useEffect(() => {
 		if (channelTo.network === 'VITE') {
-			destinationAddressSet(vcInstance?.accounts[0] || '');
+			destinationAddressSet(activeViteAddress || '');
 		} else {
 			destinationAddressSet(metamaskAddress || '');
 		}
-	}, [vcInstance, channelTo, metamaskAddress]);
+	}, [activeViteAddress, channelTo, metamaskAddress]);
 
 	useEffect(() => {
 		if (
@@ -802,9 +828,16 @@ const Home = ({
 											  }bscscan.com/address/${metamaskAddress}`,
 								  }
 								: {
-										address: vcInstance?.accounts[0],
+										address: activeViteAddress,
 										// `() => vcInstance?.killSession()` doesn't work by itself for some reason
-										logOut: vcInstance?.killSession && (() => vcInstance.killSession()),
+										logOut: vcInstance?.killSession
+											? () => vcInstance.killSession()
+											: window.vitePassport?.disconnectWallet
+											? () => {
+													window.vitePassport?.disconnectWallet();
+													setState({ vpAddress: undefined });
+											  }
+											: undefined,
 										balance: viteBalanceInfo
 											? roundDownTo6Decimals(
 													getViteTokenBalance(viteBalanceInfo, constant.Vite_TokenId)
@@ -812,7 +845,7 @@ const Home = ({
 											: '...',
 										addressExplorerURL: `https://${
 											networkType === 'testnet' ? 'test.' : ''
-										}vitescan.io/address/${vcInstance?.accounts[0]}`,
+										}vitescan.io/address/${activeViteAddress}`,
 								  };
 						const connected = !!wallet?.address;
 
@@ -833,10 +866,10 @@ const Home = ({
 											</div>
 										</div>
 									</div>
-									{connected && wallet.logOut && (
+									{connected && !!wallet.logOut && (
 										<button
 											className="text-white rounded-full bg-skin-highlight xy h-7 w-7"
-											onClick={() => wallet.logOut()}
+											onClick={wallet.logOut}
 										>
 											<Logout size={20} />
 										</button>
@@ -845,7 +878,7 @@ const Home = ({
 										className={`text-white rounded-full bg-skin-highlight xy h-7 w-7 ${
 											connected ? 'hidden' : ''
 										}`}
-										walletType={walletType}
+										walletType={walletType as 'Vite Wallet' | 'MetaMask'}
 									>
 										<Link size={20} />
 									</ConnectWalletButton>
@@ -855,7 +888,7 @@ const Home = ({
 										<div className="h-[1px] my-5 bg-skin-line-divider" />
 										<div className="xy justify-between text-xs font-normal">
 											<p className="flex-1">
-												{platform} {i18n.address} : {shortenAddress(wallet.address)}
+												{platform} {i18n.address} : {shortenAddress(wallet.address!)}
 											</p>
 											<div className="xy gap-1 text-skin-muted">
 												<button onClick={() => copyWithToast(wallet.address)}>
@@ -996,22 +1029,24 @@ const Home = ({
 							</div>
 						</div>
 						<div className="flex-1 space-y-6">
-							{[
+							{(
 								[
-									channelFrom.icon,
-									channelFrom,
-									fromAddress,
-									bridgeTransaction?.fromHash,
-									bridgeTransaction?.fromHashConfirmationNums,
-								],
-								[
-									channelTo.icon,
-									channelTo,
-									destinationAddress,
-									bridgeTransaction?.toHash,
-									bridgeTransaction?.toHashConfirmationNums,
-								],
-							].map(([imgSrc, channel, address, hash, confirmations], i) => (
+									[
+										channelFrom.icon,
+										channelFrom,
+										fromAddress,
+										bridgeTransaction?.fromHash,
+										bridgeTransaction?.fromHashConfirmationNums,
+									],
+									[
+										channelTo.icon,
+										channelTo,
+										destinationAddress,
+										bridgeTransaction?.toHash,
+										bridgeTransaction?.toHashConfirmationNums,
+									],
+								] as const
+							).map(([imgSrc, channel, address, hash, confirmations = 0], i) => (
 								<div className="fx shadow-skin-base p-4" key={i}>
 									<img src={imgSrc} alt={channel.desc} className="w-8 mr-4" />
 									<div className="text-sm flex-1 space-y-1">
@@ -1039,7 +1074,7 @@ const Home = ({
 											<p>
 												{confirmations >= channel.confirmedThreshold
 													? i18n.confirmed
-													: `(${confirmations || 0} / ${channel.confirmedThreshold})`}
+													: `(${confirmations} / ${channel.confirmedThreshold})`}
 											</p>
 										</div>
 									</div>

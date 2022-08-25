@@ -31,4 +31,8 @@ export const toSmallestUnit = (num: string, decimals = 0) => {
 	);
 };
 
-export const roundDownTo6Decimals = (balance: string) => Math.floor(+balance * 1000000) / 1000000 + '';
+export const roundDownTo6Decimals = (balance: string) =>
+	Math.floor(+balance * 1000000) / 1000000 + '';
+
+export const makeReadable = (err: any) =>
+	err.toString() === '[object Object]' ? JSON.stringify(err) : err.toString();

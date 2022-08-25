@@ -53,12 +53,4 @@
 	.blue-rect[disabled] {
 		@apply bg-skin-disabled-rect text-white;
 	}
-
-	.toast-line-gradient {
-		background: linear-gradient(136deg, rgba(84, 182, 255, 1) 0%, rgba(42, 127, 255, 1) 100%);
-	}
-
-	.dark .toast-line-gradient {
-		background: linear-gradient(138deg, #052ef5 0%, #0d6df0 31%, #0b92e7 49%, #0bb6eb 71%, #00e0f2 100%);
-	}
 }

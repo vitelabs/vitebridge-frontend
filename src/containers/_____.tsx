@@ -1,4 +1,4 @@
-import { connect } from '../utils/global-context';
+import { connect } from '../utils/globalContext';
 import { State } from '../utils/types';
 
 type Props = State & {};

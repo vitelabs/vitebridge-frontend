@@ -1,7 +1,7 @@
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import HomePage from '../pages/Home';
 import PageContainer from './PageContainer';
-import { connect } from '../utils/global-context';
+import { connect } from '../utils/globalContext';
 import { useCallback, useEffect, useMemo } from 'react';
 import { NewAccountBlock, State, ViteBalanceInfo } from '../utils/types';
 import Toast from '../containers/Toast';
@@ -23,13 +23,45 @@ const mainnetRPC = new provider(providerWsURLs.mainnet, providerTimeout, provide
 
 type Props = State;
 
-const Router = ({ setState, vcInstance, networkType }: Props) => {
+const Router = ({ setState, vpAddress, vcInstance, networkType }: Props) => {
 	const viteApi = useMemo(() => {
 		const viteApi = new ViteAPI(networkType === 'mainnet' ? mainnetRPC : testnetRPC, () => {
 			// console.log('client connected');
 		});
 		return viteApi;
 	}, [networkType]); // eslint-disable-line
+
+	const activeViteAddress = useMemo(() => {
+		return vpAddress || vcInstance?.accounts[0];
+	}, [vpAddress, vcInstance]);
+	useEffect(() => {
+		setState({ activeViteAddress });
+	}, [setState, activeViteAddress]);
+
+	// useEffect(() => {
+	// 	let unsubscribe = () => {};
+	// 	if (vpAddress && vpAddress === activeViteAddress && window?.vitePassport?.on) {
+	// 		unsubscribe = window.vitePassport.on('networkChange', (payload) => {
+	// 			let i = networkList.findIndex((n) => n.rpcUrl === payload.activeNetwork.rpcUrl);
+	// 			if (i === -1) {
+	// 				setState({ toast: i18n.viteExpressNetworkDoesNotMatchDappNetworkUrl });
+	// 				i = 0;
+	// 			}
+	// 			setState({ activeNetworkIndex: i });
+	// 		});
+	// 	}
+	// 	return unsubscribe;
+	// }, [setState, vpAddress, activeViteAddress, i18n]);
+
+	useEffect(() => {
+		let unsubscribe = () => {};
+		if (window?.vitePassport?.on) {
+			unsubscribe = window.vitePassport.on('accountChange', (payload) => {
+				setState({ vpAddress: payload.activeAddress });
+			});
+		}
+		return unsubscribe;
+	}, [setState]);
 
 	useEffect(() => setState({ viteApi }), [viteApi]); // eslint-disable-line
 
@@ -52,6 +84,7 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 			// https://docs.metamask.io/guide/ethereum-provider.html#accountschanged
 			// @ts-ignore
 			window.ethereum.on('accountsChanged', (accounts: string[]) => {
+				// OPTIMIZE: https://ethereum.stackexchange.com/questions/88084/how-to-clean-up-unused-meta-mask-event-listeners
 				// IDEA: const connected = !!accounts.length;
 				setState({ metamaskAddress: accounts[0] });
 			});
@@ -59,8 +92,8 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 	}, [setState]);
 
 	const updateViteBalanceInfo = useCallback(() => {
-		if (vcInstance?.accounts[0]) {
-			getBalanceInfo(vcInstance.accounts[0])
+		if (activeViteAddress) {
+			getBalanceInfo(activeViteAddress)
 				// @ts-ignore
 				.then((res: ViteBalanceInfo) => {
 					// console.log('res:', res);
@@ -68,19 +101,19 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 				})
 				.catch((e) => {
 					console.log(e);
-					setState({ toast: e.message, vcInstance: null });
+					setState({ toast: e.message, vcInstance: undefined });
 					localStorage.removeItem(VCSessionKey);
 					// Sometimes on page load, this will catch with
 					// Error: CONNECTION ERROR: Couldn't connect to node wss://buidl.vite.net/gvite/ws.
 				});
 		}
-	}, [setState, getBalanceInfo, vcInstance]);
+	}, [setState, getBalanceInfo, activeViteAddress]);
 
-	useEffect(() => updateViteBalanceInfo(), [vcInstance?.accounts[0]]); // eslint-disable-line
+	useEffect(() => updateViteBalanceInfo(), [activeViteAddress]); // eslint-disable-line
 
 	useEffect(() => {
-		if (vcInstance) {
-			subscribe('newAccountBlocksByAddr', vcInstance.accounts[0])
+		if (activeViteAddress) {
+			subscribe('newAccountBlocksByAddr', activeViteAddress)
 				.then((event: any) => {
 					event.on((result: NewAccountBlock) => {
 						// NOTE: seems like a hack cuz I don't even need the block info
@@ -90,7 +123,7 @@ const Router = ({ setState, vcInstance, networkType }: Props) => {
 				.catch((err: any) => console.warn(err));
 		}
 		return () => viteApi.unsubscribeAll();
-	}, [setState, subscribe, vcInstance, viteApi, updateViteBalanceInfo]);
+	}, [setState, subscribe, activeViteAddress, viteApi, updateViteBalanceInfo]);
 
 	return (
 		<BrowserRouter>

@@ -1,7 +1,31 @@
+import { AccountBlockBlock } from '@vite/vitejs/distSrc/utils/type';
 import { ViteAPI } from '@vite/vitejs/distSrc/viteAPI/type';
 import en from '../i18n/en';
-import { setStateType } from './global-context';
+import { setStateType } from './globalContext';
 import { VC } from './viteConnect';
+
+type Network = {
+	name: string;
+	rpcUrl: string;
+	explorerUrl?: string;
+};
+type injectedScriptEvents = 'accountChange' | 'networkChange';
+type VitePassport = {
+	getConnectedAddress: () => Promise<undefined | string>;
+	disconnectWallet: () => Promise<undefined>;
+	getNetwork: () => Promise<Network>;
+	connectWallet: () => Promise<{ domain: string }>;
+	writeAccountBlock: (type: string, params: object) => Promise<AccountBlockBlock>;
+	on: (
+		event: injectedScriptEvents,
+		callback: (payload: { activeAddress?: string; activeNetwork: Network }) => void
+	) => () => void;
+};
+declare global {
+	interface Window {
+		vitePassport?: VitePassport;
+	}
+}
 
 export type Balance = {
 	[tokenId: string]: string;
@@ -13,13 +37,15 @@ export type NetworkTypes = 'testnet' | 'mainnet';
 export type State = {
 	setState: setStateType;
 	viteApi: ViteAPI;
-	toast: string;
+	toast: any;
 	networkType: NetworkTypes;
 	languageType: string;
 	i18n: typeof en;
-	vcInstance: VC | null;
+	vcInstance?: VC;
+	vpAddress?: string;
 	metamaskAddress: string;
 	viteBalanceInfo: ViteBalanceInfo;
+	activeViteAddress?: string;
 };
 
 export type ViteBalanceInfo = {

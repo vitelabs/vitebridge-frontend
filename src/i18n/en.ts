@@ -57,6 +57,13 @@ const en = {
 	insufficientBalance: 'Insufficient balance',
 	mainnet: 'Mainnet',
 	testnet: 'Testnet',
+	connectWithVitePassport: 'Connect with Vite Passport',
+	vitePassportNotDetected: 'Vite Passport not detected',
+	viteExpressNetworkDoesNotMatchDappNetworkUrl:
+		'Vite Express network does not match dapp network URL',
+	or: 'or',
+	switchVitePassportNetworkToMainnet: 'Switch Vite Passport network to mainnet',
+	switchVitePassportNetworkToTestnet: 'Switch Vite Passport network to testnet',
 	test: 'test',
 	'': '',
 };

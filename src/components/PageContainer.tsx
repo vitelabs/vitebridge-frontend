@@ -2,7 +2,7 @@ import { ReactNode, useEffect } from 'react';
 import A from './A';
 import { useLocation } from 'react-router-dom';
 import Select from './Select';
-import { connect } from '../utils/global-context';
+import { connect } from '../utils/globalContext';
 import { State } from '../utils/types';
 import LightBulb from '../assets/LightBulb';
 import Moon from '../assets/Moon';
