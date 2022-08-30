@@ -5,18 +5,17 @@ export const getPastEvents = async (
 	viteApi: ViteAPI,
 	contractAddress: string,
 	contractAbi: any[],
-	eventName: string = 'allEvents',
+	eventName = 'allEvents',
 	{
 		fromHeight = 0,
 		toHeight = 0,
 	}: {
-		filter?: Object;
-		fromHeight?: Number;
-		toHeight?: Number;
+		fromHeight?: number;
+		toHeight?: number;
 	}
 ) => {
-	let result: any[] = [];
-	let logs = await viteApi.request('ledger_getVmLogsByFilter', {
+	const result: any[] = [];
+	const logs = await viteApi.request('ledger_getVmLogsByFilter', {
 		addressHeightRange: {
 			[contractAddress!]: {
 				fromHeight: fromHeight.toString(),
@@ -31,18 +30,18 @@ export const getPastEvents = async (
 					return a.name === eventName;
 			  });
 	if (logs) {
-		for (let log of logs) {
-			let vmLog = log.vmlog;
-			let topics = vmLog.topics;
-			for (let abiItem of filteredAbi) {
-				let signature = abiUtil.encodeLogSignature(abiItem);
+		for (const log of logs) {
+			const vmLog = log.vmlog;
+			const topics = vmLog.topics;
+			for (const abiItem of filteredAbi) {
+				const signature = abiUtil.encodeLogSignature(abiItem);
 				if (abiItem.type === 'event' && signature === topics[0]) {
 					let dataHex;
 					if (vmLog.data) {
 						dataHex = utils._Buffer.from(vmLog.data, 'base64').toString('hex');
 					}
-					let returnValues = abiUtil.decodeLog(abiItem, dataHex, topics);
-					let item = {
+					const returnValues = abiUtil.decodeLog(abiItem, dataHex, topics);
+					const item = {
 						returnValues: returnValues,
 						event: abiItem.name,
 						raw: {
@@ -77,18 +76,18 @@ export const query = async (
 		throw new Error('method not found:' + methodName);
 	}
 
-	let data = abiUtil.encodeFunctionCall(methodAbi, params);
-	let dataBase64 = utils._Buffer.from(data, 'hex').toString('base64');
+	const data = abiUtil.encodeFunctionCall(methodAbi, params);
+	const dataBase64 = utils._Buffer.from(data, 'hex').toString('base64');
 	while (true) {
-		let result = await viteApi.request('contract_query', {
+		const result = await viteApi.request('contract_query', {
 			address,
 			data: dataBase64,
 		});
 
 		// parse result
 		if (result) {
-			let resultBytes = utils._Buffer.from(result, 'base64').toString('hex');
-			let outputs = [];
+			const resultBytes = utils._Buffer.from(result, 'base64').toString('hex');
+			const outputs = [];
 			for (let i = 0; i < methodAbi.outputs.length; i++) {
 				outputs.push(methodAbi.outputs[i].type);
 			}

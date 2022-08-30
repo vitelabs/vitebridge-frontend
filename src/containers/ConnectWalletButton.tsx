@@ -21,7 +21,6 @@ const ConnectWalletButton = ({
 	vcInstance,
 }: Props) => {
 	const [connectURI, connectURISet] = useState('');
-	console.log('connectURI:', connectURI);
 
 	useEffect(() => {
 		if (vcInstance) {
@@ -73,6 +72,10 @@ const ConnectWalletButton = ({
 								if (window?.vitePassport) {
 									try {
 										await window.vitePassport.connectWallet();
+										console.log(
+											'window.vitePassport.connectWallet:',
+											window.vitePassport.connectWallet
+										);
 										// const activeNetwork = await window.vitePassport.getNetwork();
 										setState({
 											vpAddress: await window.vitePassport.getConnectedAddress(),

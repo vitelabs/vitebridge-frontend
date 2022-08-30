@@ -11,11 +11,16 @@ type Network = {
 };
 type injectedScriptEvents = 'accountChange' | 'networkChange';
 type VitePassport = {
+	// relayed methods
 	getConnectedAddress: () => Promise<undefined | string>;
 	disconnectWallet: () => Promise<undefined>;
 	getNetwork: () => Promise<Network>;
+
+	// methods that require confirmation popup
 	connectWallet: () => Promise<{ domain: string }>;
-	writeAccountBlock: (type: string, params: object) => Promise<AccountBlockBlock>;
+	writeAccountBlock: (type: string, params: object) => Promise<{ block: AccountBlockBlock }>;
+
+	// `on` subscribes to `event` and returns an unsubscribe function
 	on: (
 		event: injectedScriptEvents,
 		callback: (payload: { activeAddress?: string; activeNetwork: Network }) => void
@@ -31,14 +36,11 @@ export type Balance = {
 	[tokenId: string]: string;
 };
 
-export type Networks = 'vite' | 'bsc' | 'eth';
-export type NetworkTypes = 'testnet' | 'mainnet';
-
 export type State = {
 	setState: setStateType;
 	viteApi: ViteAPI;
 	toast: any;
-	networkType: NetworkTypes;
+	networkType: 'testnet' | 'mainnet';
 	languageType: string;
 	i18n: typeof en;
 	vcInstance?: VC;

@@ -3,7 +3,7 @@ import HomePage from '../pages/Home';
 import PageContainer from './PageContainer';
 import { connect } from '../utils/globalContext';
 import { useCallback, useEffect, useMemo } from 'react';
-import { NewAccountBlock, State, ViteBalanceInfo } from '../utils/types';
+import { State, ViteBalanceInfo } from '../utils/types';
 import Toast from '../containers/Toast';
 import { metaMaskIsSupported } from '../utils/wallet';
 import { VCSessionKey } from '../utils/viteConnect';
@@ -115,7 +115,8 @@ const Router = ({ setState, vpAddress, vcInstance, networkType }: Props) => {
 		if (activeViteAddress) {
 			subscribe('newAccountBlocksByAddr', activeViteAddress)
 				.then((event: any) => {
-					event.on((result: NewAccountBlock) => {
+					// event.on((result: NewAccountBlock) => {
+					event.on(() => {
 						// NOTE: seems like a hack cuz I don't even need the block info
 						updateViteBalanceInfo();
 					});

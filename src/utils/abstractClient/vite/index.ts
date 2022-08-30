@@ -1,5 +1,4 @@
-import { accountBlock } from '@vite/vitejs';
-import { Buffer } from 'buffer/'; // note: the trailing slash is important!
+import { accountBlock, utils } from '@vite/vitejs';
 import _viteAbi from './channel.vite.abi.json';
 import offChainCode from './offChainCode';
 import { VC } from '../../viteConnect';
@@ -22,7 +21,7 @@ export class ViteChannel {
 		this.vpAddress = config.vpAddress;
 		this.vcInstance = config.vcInstance;
 		this.viteChannelAbi = _viteAbi;
-		this.viteOffChainCode = Buffer.from(offChainCode, 'hex').toString('base64');
+		this.viteOffChainCode = utils._Buffer.from(offChainCode, 'hex').toString('base64');
 		this.viteChannelAddress = config.address;
 		this.tokenId = config.tokenId;
 	}
@@ -52,6 +51,6 @@ export class ViteChannel {
 			const block = await accountBlock.createAccountBlock(...params).accountBlock;
 			return this.vcInstance.signAndSendTx([{ block }]) as Promise<ViteTransaction>;
 		}
-		return window.vitePassport!.writeAccountBlock(...params);
+		return (await window.vitePassport!.writeAccountBlock(...params)).block;
 	}
 }

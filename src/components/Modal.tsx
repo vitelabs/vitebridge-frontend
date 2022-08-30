@@ -10,10 +10,11 @@ type Props = {
 	noX?: boolean;
 };
 
+const modalParent = document.getElementById('modal')!;
+
 const Modal = ({ header, noX, onClose = () => {}, children, className }: Props) => {
 	const mouseDraggingModal = useRef(false);
 	const [index, indexSet] = useState<number>();
-	const modalParent: HTMLElement | null = useMemo(() => document.getElementById('modal'), []);
 
 	useEffect(() => {
 		indexSet(modalParent?.children.length);

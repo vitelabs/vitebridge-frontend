@@ -1,6 +1,7 @@
 import '../styles/reset.css';
 import '../styles/colors.css';
 import '../styles/classes.css';
+import '../styles/theme.ts';
 import Router from './Router';
 import { Provider } from '../utils/globalContext';
 import { getMetaMaskAccount } from '../utils/wallet';
@@ -16,23 +17,15 @@ const App = () => {
 			const vcSession = getValidVCSession();
 			const vcInstance = vcSession ? initViteConnect(vcSession) : undefined;
 			let vpAddress: undefined | string;
-			console.log('!!window?.vitePassport:', !!window?.vitePassport);
-			try {
-				if (window?.vitePassport?.getConnectedAddress) {
-					vpAddress = await window.vitePassport.getConnectedAddress();
-					console.log('vpAddress:', vpAddress);
-				}
-			} catch (error) {
-				console.log('error:', error);
+			if (window?.vitePassport?.getConnectedAddress) {
+				vpAddress = await window.vitePassport.getConnectedAddress();
 			}
-
 			const state: Partial<State> = {
 				vpAddress,
 				vcInstance,
 				networkType: localStorage.networkType || 'testnet',
 				languageType: localStorage.languageType || 'en',
 				metamaskAddress: await getMetaMaskAccount(),
-				activeViteAddress: vpAddress || vcInstance?.accounts?.[0],
 			};
 			initialStateSet(state);
 		})();

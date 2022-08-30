@@ -20,7 +20,7 @@ export const promptMetaMaskAccount = async () => {
 };
 
 export const getViteTokenBalance = (viteBalanceInfo: ViteBalanceInfo, tokenId: string) => {
-	if (viteBalanceInfo.balance.balanceInfoMap) {
+	if (viteBalanceInfo?.balance?.balanceInfoMap?.[tokenId]) {
 		const { balance, tokenInfo } = viteBalanceInfo.balance.balanceInfoMap[tokenId];
 		return toBiggestUnit(balance, tokenInfo.decimals);
 	}

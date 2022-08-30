@@ -13,26 +13,24 @@ const defaultOptions = {
 	mSize: 0.3, //0.24,
 };
 
-const QR = React.memo(
-	({
-		text,
-		options,
-	}: React.HTMLProps<HTMLDivElement> & {
-		text: string;
-		options?: object;
-	}) => {
-		return (
-			<div
-				ref={async (e) => {
-					// Will double render if e.innerHTML is truthy
-					if (e !== null && !e.innerHTML) {
-						const qrCode = new qrcode(e);
-						qrCode.generate(text, { ...defaultOptions, ...options });
-					}
-				}}
-			/>
-		);
-	}
-);
+const QR = ({
+	text,
+	options,
+}: React.HTMLProps<HTMLDivElement> & {
+	text: string;
+	options?: object;
+}) => {
+	return (
+		<div
+			ref={async (e) => {
+				// Will double render if e.innerHTML is truthy
+				if (e !== null && !e.innerHTML) {
+					const qrCode = new qrcode(e);
+					qrCode.generate(text, { ...defaultOptions, ...options });
+				}
+			}}
+		/>
+	);
+};
 
 export default QR;

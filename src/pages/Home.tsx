@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { wallet, constant } from '@vite/vitejs';
 import { ethers } from 'ethers';
 import Picker from '../components/Picker';
-import { chainInfo, channelCombos, PROD, viteBridgeAssets } from '../utils/constants';
+import { allNetworks, channelCombos, PROD, viteBridgeAssets } from '../utils/constants';
 import { connect } from '../utils/globalContext';
 import { useTitle } from '../utils/hooks';
 import { BridgeTransaction, State } from '../utils/types';
@@ -28,8 +28,8 @@ import Modal from '../components/Modal';
 import Checkbox from '../components/Checkbox';
 import { isDarkMode } from '../utils/misc';
 import { ViteChannel } from '../utils/abstractClient/vite';
-import ____erc20Abi from '../utils/abstractClient/erc20/erc20.json';
-import ____channelAbi from '../utils/abstractClient/erc20/channel.ether.abi.json';
+import erc20Abi from '../utils/abstractClient/erc20/erc20.json';
+import channelAbi from '../utils/abstractClient/erc20/channel.ether.abi.json';
 import Check from '../assets/Check';
 import PendingDots from '../components/PendingDots';
 import { getViteTokenBalance, metaMaskIsSupported } from '../utils/wallet';
@@ -136,14 +136,12 @@ const Home = ({
 	);
 
 	const metaMaskNetworkMatchesFromNetwork = useMemo(
-		// @ts-ignore
-		() => metaMaskChainId === chainInfo[channelFrom.desc]?.id,
-		[metaMaskChainId, channelFrom]
+		() => metaMaskChainId === allNetworks[networkType][channelFrom.network].chainId,
+		[metaMaskChainId, channelFrom, networkType]
 	);
 	const metaMaskNetworkMatchesToNetwork = useMemo(
-		// @ts-ignore
-		() => metaMaskChainId === chainInfo[channelTo.desc]?.id,
-		[metaMaskChainId, channelTo]
+		() => metaMaskChainId === allNetworks[networkType][channelTo.network].chainId,
+		[metaMaskChainId, channelTo, networkType]
 	);
 	const fromAssetBalance = useMemo(() => {
 		if (!metaMaskNetworkMatchesFromNetwork && fromWallet === 'MetaMask') {
@@ -152,7 +150,7 @@ const Home = ({
 		if (channelFrom) {
 			let balance;
 			if (viteBalanceInfo && channelFrom.network === 'VITE') {
-				balance = getViteTokenBalance(viteBalanceInfo, constant.Vite_TokenId);
+				balance = getViteTokenBalance(viteBalanceInfo, channelFrom.tokenId!);
 			} else {
 				balance = metaMaskFromAssetBalance;
 			}
@@ -195,26 +193,28 @@ const Home = ({
 		return (stepsCompleted / 3) * 100;
 	}, [fromWalletConnected, channelFrom, channelTo, bridgeTransaction]);
 	const channelFromEthersProvider = useMemo(() => {
-		const url = chainInfo[channelFrom.desc]?.rpc;
-		if (url) {
-			return new ethers.providers.JsonRpcProvider(url);
+		if (channelFrom.network !== 'VITE') {
+			return new ethers.providers.JsonRpcProvider(
+				allNetworks[networkType][channelFrom.network].rpcUrl
+			);
 		}
-	}, [channelFrom]);
+	}, [channelFrom, networkType]);
 	const channelToEthersProvider = useMemo(() => {
-		const url = chainInfo[channelTo.desc]?.rpc;
-		if (url) {
-			return new ethers.providers.JsonRpcProvider(url);
+		if (channelTo.network !== 'VITE') {
+			return new ethers.providers.JsonRpcProvider(
+				allNetworks[networkType][channelTo.network].rpcUrl
+			);
 		}
-	}, [channelTo]);
+	}, [channelTo, networkType]);
 	const channelFromERC20Contract = useMemo(() => {
 		if (channelFrom.erc20 && channelFromEthersProvider) {
 			return new ethers.Contract(
 				channelFrom.erc20,
-				____erc20Abi,
-				channelFromEthersProvider.getSigner()
+				erc20Abi,
+				channelFromEthersProvider.getSigner(metamaskAddress)
 			);
 		}
-	}, [channelFrom, channelFromEthersProvider]);
+	}, [channelFrom, channelFromEthersProvider, metamaskAddress]);
 
 	const copyWithToast = useCallback(
 		(text = '') => {
@@ -224,64 +224,7 @@ const Home = ({
 		[setState, i18n]
 	);
 
-	const checkIfMetaMaskNeedsToChangeNetwork = useCallback(() => {
-		let isWrongNetwork = false;
-		if (fromWallet === 'MetaMask') {
-			if (channelFrom.network === 'BSC') {
-				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
-					setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscMainnet,
-					});
-					isWrongNetwork = true;
-				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
-					setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscTestnet,
-					});
-					isWrongNetwork = true;
-				}
-			} else if (channelFrom.network === 'ETH') {
-				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
-					setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToEthMainnet,
-					});
-					isWrongNetwork = true;
-				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
-					setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToRinkebyTestNetwork,
-					});
-					isWrongNetwork = true;
-				}
-			}
-			if (isWrongNetwork) {
-				metaMaskNativeAssetBalanceSet('');
-			}
-		}
-
-		return isWrongNetwork;
-	}, [setState, fromWallet, channelFrom, networkType, metaMaskNetworkMatchesFromNetwork, i18n]);
-
 	const openBridgeConfirmationModal = useCallback(async () => {
-		if (checkIfMetaMaskNeedsToChangeNetwork()) {
-			return;
-		}
-		if (fromNetwork.label === 'Vite Testnet' && window.vitePassport && vpAddress) {
-			const activeViteNetwork = await window.vitePassport.getNetwork();
-			if (networkType === 'testnet') {
-				if (
-					activeViteNetwork.rpcUrl !== 'wss://buidl.vite.net/gvite/ws' &&
-					activeViteNetwork.rpcUrl !== 'https://buidl.vite.net/gvite'
-				) {
-					return setState({ toast: i18n.switchVitePassportNetworkToTestnet });
-				}
-			}
-			// else if (
-			// 	activeViteNetwork.rpcUrl !== 'wss://node.vite.net/gvite/ws' &&
-			// 	activeViteNetwork.rpcUrl !== 'https://node.vite.net/gvite'
-			// ) {
-			// 	return setState({ toast: i18n.switchVitePassportNetworkToMainnet });
-			// }
-		}
-
 		const num = +amount;
 		if (num < minAmount || num > maxAmount) {
 			return setState({ toast: i18n.illegalAmount });
@@ -296,51 +239,87 @@ const Home = ({
 		confirmingBridgeTxSet(true);
 		agreesToTermsSet(!PROD); // saves time during development
 		walletPromptLoadingSet(false);
-	}, [
-		networkType,
-		vpAddress,
-		fromNetwork.label,
-		checkIfMetaMaskNeedsToChangeNetwork,
-		amount,
-		channelTo,
-		destinationAddress,
-		i18n,
-		maxAmount,
-		minAmount,
-		setState,
-	]);
+	}, [amount, channelTo, destinationAddress, i18n, maxAmount, minAmount, setState]);
 
 	const startBridgeTransaction = useCallback(async () => {
-		if (checkIfMetaMaskNeedsToChangeNetwork()) {
-			return;
+		if (fromWallet === 'MetaMask') {
+			if (channelFrom.network === 'BSC') {
+				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
+					return setState({
+						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscMainnet,
+					});
+				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
+					return setState({
+						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscTestnet,
+					});
+				}
+			} else if (channelFrom.network === 'ETH') {
+				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
+					return setState({
+						toast: i18n.switchTheNetworkInYourMetaMaskWalletToEthMainnet,
+					});
+				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
+					return setState({
+						toast: i18n.switchTheNetworkInYourMetaMaskWalletToRinkebyTestNetwork,
+					});
+				}
+			}
 		}
+
+		if (channelFrom.network === 'VITE' && vpAddress) {
+			const activeViteNetwork = await window.vitePassport!.getNetwork();
+			if (networkType === 'testnet') {
+				if (
+					activeViteNetwork.rpcUrl !== 'wss://buidl.vite.net/gvite/ws' &&
+					activeViteNetwork.rpcUrl !== 'https://buidl.vite.net/gvite'
+				) {
+					return setState({ toast: i18n.switchVitePassportNetworkToTestnet });
+				}
+			} else if (
+				activeViteNetwork.rpcUrl !== 'wss://node.vite.net/gvite/ws' &&
+				activeViteNetwork.rpcUrl !== 'https://node.vite.net/gvite'
+			) {
+				return setState({ toast: i18n.switchVitePassportNetworkToMainnet });
+			}
+		}
+
+		// TODO: No way to check network on Vite Wallet app via ViteConnect?
+
 		bridgeTransactionSet(null);
 		walletPromptLoadingSet(true);
 
-		let ethToViteInputTx: ethers.providers.TransactionResponse;
+		let ethToViteInputTx!: ethers.providers.TransactionResponse;
 		let ethToViteOutputSendTx: ViteTransaction; // | ethers.providers.TransactionResponse;
-		let viteToEthInputReceiveTx: ViteTransaction;
+		let viteToEthInputReceiveTx!: ViteTransaction;
 		let viteToEthOutputTxHash: string;
 		let ethToViteOutputHash: string;
 		try {
 			const amountInSmallestUnit = toSmallestUnit(amount, channelFrom.decimals);
 			if (fromWallet === 'MetaMask') {
 				// TODO: come up with better names for allowance and approved
-				const allowance = await channelFromERC20Contract!.allowance(
-					fromAddress,
-					channelFrom.contract
-				);
-				// https://ethereum.org/hr/developers/tutorials/erc20-annotated-code/
-				const approved = +allowance.toString() >= +amountInSmallestUnit;
-				if (!approved) {
-					await channelFromERC20Contract!.approve(channelFrom.contract, amountInSmallestUnit);
+				console.log('fromAddress:', fromAddress);
+				if (channelFromERC20Contract) {
+					console.log('channelFromERC20Contract!.approve:', channelFromERC20Contract!.approve);
+					const allowance = await channelFromERC20Contract.allowance(
+						fromAddress,
+						channelFrom.contract
+					);
+
+					// https://ethereum.org/hr/developers/tutorials/erc20-annotated-code/
+					const approved = +allowance.toString() >= +amountInSmallestUnit;
+					console.log('allowance:', allowance);
+					console.log('approved:', approved);
+					if (!approved) {
+						await channelFromERC20Contract.approve(channelFrom.contract, amountInSmallestUnit);
+					}
 				}
 				const erc20Channel = new ethers.Contract(
 					channelFrom.contract,
-					____channelAbi,
-					channelFromEthersProvider!.getSigner()
+					channelAbi,
+					channelFromEthersProvider!.getSigner(metamaskAddress)
 				);
 				const originAddr = `0x${wallet.getOriginalAddressFromAddress(destinationAddress)}`;
+				console.log('originAddr:', originAddr);
 				ethToViteInputTx = await erc20Channel.input(
 					channelFromId,
 					originAddr,
@@ -366,11 +345,11 @@ const Home = ({
 					address: channelFrom.contract,
 					topics: [ethers.utils.id('Input(uint256,uint256,bytes32,bytes,uint256,address)')],
 				});
-				let abi = [
+				const abi = [
 					'event Input(uint256 channelId, uint256 index, bytes32 inputHash, bytes dest, uint256 value, address from)',
 				];
-				let iface = new ethers.utils.Interface(abi);
-				let parsedEvents = events.map((log) => iface.parseLog(log));
+				const iface = new ethers.utils.Interface(abi);
+				const parsedEvents = events.map((log) => iface.parseLog(log));
 				ethToViteOutputHash = parsedEvents[0].args.inputHash;
 			} else {
 				const viteChannel = new ViteChannel({
@@ -386,7 +365,6 @@ const Home = ({
 					destinationAddress,
 					amountInSmallestUnit
 				);
-				console.log('test');
 				confirmingBridgeTxSet(false);
 				confirmingViteConnectSet(false);
 				transactionConfirmationStatusOpenSet(true);
@@ -404,8 +382,7 @@ const Home = ({
 					'ledger_getAccountBlockByHash',
 					viteToEthInputSendTx.receiveBlockHash
 				);
-
-				const events = await getPastEvents(viteApi, channelFrom.contract, ____channelAbi, 'Input', {
+				const events = await getPastEvents(viteApi, channelFrom.contract, channelAbi, 'Input', {
 					fromHeight: +viteToEthInputReceiveTx.height,
 					toHeight: 0,
 				});
@@ -414,8 +391,8 @@ const Home = ({
 				}
 			}
 
-			let bridgeTx: Partial<BridgeTransaction> = {
-				fromHash: ethToViteInputTx!?.hash || viteToEthInputReceiveTx!?.hash,
+			const bridgeTx: Partial<BridgeTransaction> = {
+				fromHash: ethToViteInputTx?.hash || viteToEthInputReceiveTx?.hash,
 			};
 			let fromConfirmed = false;
 			let toConfirmed = false;
@@ -438,14 +415,14 @@ const Home = ({
 							outputHash: ethToViteOutputHash!,
 							outputId: channelFrom.channelId, // NOTE: assume outputId is channelFrom.channelId
 						};
-						const channel = await query(viteApi, ____channelAbi, channelTo.contract, 'channels', [
+						const channel = await query(viteApi, channelAbi, channelTo.contract, 'channels', [
 							output.channelId + '',
 						]);
 						if (+channel?.[2].toString() >= output.outputId) {
 							const events = await getPastEvents(
 								viteApi,
 								channelTo.contract,
-								____channelAbi,
+								channelAbi,
 								'Output',
 								{
 									fromHeight:
@@ -485,11 +462,11 @@ const Home = ({
 							address: channelTo.contract,
 							topics: [ethers.utils.id('Output(uint256,uint256,bytes32,address,uint256)')],
 						});
-						let abi = [
+						const abi = [
 							'event Output(uint256 channelId, uint256 index, bytes32 outputHash, address dest, uint256 value)',
 						];
-						let iface = new ethers.utils.Interface(abi);
-						let parsedEvents = events.map((log) => iface.parseLog(log));
+						const iface = new ethers.utils.Interface(abi);
+						const parsedEvents = events.map((log) => iface.parseLog(log));
 						if (parsedEvents.length) {
 							const target =
 								events[parsedEvents.findIndex((x) => x.args.outputHash === viteToEthOutputTxHash)];
@@ -521,7 +498,7 @@ const Home = ({
 				setState({ toast: i18n.bridgingTransactionComplete });
 			}
 		} catch (e: any) {
-			// console.log('e:', e);
+			console.log('e:', e);
 			walletPromptLoadingSet(false);
 			confirmingViteConnectSet(false);
 			if (e?.code) {
@@ -533,6 +510,9 @@ const Home = ({
 			}
 		}
 	}, [
+		fromNetwork.label,
+		metaMaskNetworkMatchesFromNetwork,
+		networkType,
 		vpAddress,
 		channelFromId,
 		i18n,
@@ -547,8 +527,8 @@ const Home = ({
 		channelFromERC20Contract,
 		fromAddress,
 		setState,
+		metamaskAddress,
 		vcInstance,
-		checkIfMetaMaskNeedsToChangeNetwork,
 	]);
 
 	useEffect(() => {
@@ -570,22 +550,17 @@ const Home = ({
 	}, [activeViteAddress, channelTo, metamaskAddress]);
 
 	useEffect(() => {
-		if (
-			!fromAssetBalance &&
-			channelFromERC20Contract &&
-			metamaskAddress &&
-			metaMaskNetworkMatchesFromNetwork
-		) {
-			// TODO: accommodate native asset in addition to erc20
-			// if () {
-			// 	metaMaskFromAssetBalanceSet(metaMaskNativeAssetBalance)
-			// }
-			channelFromERC20Contract
-				.balanceOf(metamaskAddress)
-				.then((data: ethers.BigNumber) =>
-					metaMaskFromAssetBalanceSet(ethers.utils.formatUnits(data))
-				)
-				.catch((e: any) => console.log('e:', e));
+		if (!fromAssetBalance && metamaskAddress && metaMaskNetworkMatchesFromNetwork) {
+			if (channelFromERC20Contract) {
+				channelFromERC20Contract
+					.balanceOf(metamaskAddress)
+					.then((data: ethers.BigNumber) =>
+						metaMaskFromAssetBalanceSet(ethers.utils.formatUnits(data))
+					)
+					.catch((e: any) => console.log('e:', e));
+			} else {
+				metaMaskFromAssetBalanceSet(metaMaskNativeAssetBalance);
+			}
 		}
 	}, [
 		channelFrom,
@@ -593,6 +568,7 @@ const Home = ({
 		metaMaskNetworkMatchesFromNetwork,
 		channelFromERC20Contract,
 		metamaskAddress,
+		metaMaskNativeAssetBalance,
 		setState,
 		networkType,
 	]);
@@ -604,7 +580,7 @@ const Home = ({
 				.then((data) => metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data)))
 				.catch((e: any) => setState({ toast: String(e) }));
 		}
-	}, [metaMaskChainId, channelFromEthersProvider, metamaskAddress, networkType]); // eslint-disable-line
+	}, [metaMaskChainId, channelFromEthersProvider, setState, metamaskAddress, networkType]);
 
 	return (
 		<div className="m-5 xy flex-col lg:flex-row lg:items-start lg:justify-center">
