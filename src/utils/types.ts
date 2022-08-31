@@ -9,14 +9,15 @@ type Network = {
 	rpcUrl: string;
 	explorerUrl?: string;
 };
+
 type injectedScriptEvents = 'accountChange' | 'networkChange';
 type VitePassport = {
-	// relayed methods
+	// These methods are relayed from contentScript.ts => injectedScript.ts
 	getConnectedAddress: () => Promise<undefined | string>;
 	disconnectWallet: () => Promise<undefined>;
 	getNetwork: () => Promise<Network>;
 
-	// methods that require confirmation popup
+	// These methods are relayed from contentScript.ts => background.ts => popup => contentScript.ts => injectedScript.ts
 	connectWallet: () => Promise<{ domain: string }>;
 	writeAccountBlock: (type: string, params: object) => Promise<{ block: AccountBlockBlock }>;
 

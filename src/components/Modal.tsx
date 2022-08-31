@@ -1,4 +1,4 @@
-import { useRef, ReactNode, useMemo, useEffect, useState } from 'react';
+import { useRef, ReactNode, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useKeyPress } from '../utils/hooks';
 
@@ -33,7 +33,7 @@ const Modal = ({ header, noX, onClose = () => {}, children, className }: Props) 
 				document.body.style.overflow = 'visible';
 			}
 		};
-	}, [modalParent?.children.length]);
+	}, []);
 
 	return modalParent
 		? ReactDOM.createPortal(

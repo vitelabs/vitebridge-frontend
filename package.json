@@ -23,13 +23,14 @@
 	"dependencies": {
 		"@metamask/detect-provider": "1.2.0",
 		"@vite/connector": "0.0.2",
-		"@vite/vitejs-ws": "2.3.19-alpha.8",
 		"@vite/vitejs": "2.3.19-alpha.8",
+		"@vite/vitejs-ws": "2.3.19-alpha.8",
+		"bignumber.js": "^9.1.0",
 		"ethers": "5.7.0",
 		"qrcode.es": "1.0.0",
+		"react": "^18.2.0",
 		"react-dom": "^18.2.0",
-		"react-router-dom": "6.3.0",
-		"react": "^18.2.0"
+		"react-router-dom": "6.3.0"
 	},
 	"devDependencies": {
 		"@testing-library/jest-dom": "5.16.5",

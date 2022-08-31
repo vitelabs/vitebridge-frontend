@@ -510,7 +510,6 @@ const Home = ({
 			}
 		}
 	}, [
-		fromNetwork.label,
 		metaMaskNetworkMatchesFromNetwork,
 		networkType,
 		vpAddress,
@@ -551,6 +550,7 @@ const Home = ({
 
 	useEffect(() => {
 		if (!fromAssetBalance && metamaskAddress && metaMaskNetworkMatchesFromNetwork) {
+			console.log('channelFromERC20Contract:', channelFromERC20Contract);
 			if (channelFromERC20Contract) {
 				channelFromERC20Contract
 					.balanceOf(metamaskAddress)
@@ -574,13 +574,20 @@ const Home = ({
 	]);
 
 	useEffect(() => {
-		if (channelFromEthersProvider && metamaskAddress && networkType) {
-			channelFromEthersProvider
+		const provider = channelFromEthersProvider || channelToEthersProvider;
+		if (provider && metamaskAddress) {
+			provider
 				.getBalance(metamaskAddress)
 				.then((data) => metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data)))
 				.catch((e: any) => setState({ toast: String(e) }));
 		}
-	}, [metaMaskChainId, channelFromEthersProvider, setState, metamaskAddress, networkType]);
+	}, [
+		metaMaskChainId,
+		channelFromEthersProvider,
+		channelToEthersProvider,
+		setState,
+		metamaskAddress,
+	]);
 
 	return (
 		<div className="m-5 xy flex-col lg:flex-row lg:items-start lg:justify-center">
