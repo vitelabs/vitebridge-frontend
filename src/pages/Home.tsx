@@ -669,7 +669,7 @@ const Home = ({
 												: true) && <p className="text-red-500">{i18n.insufficientBalance}</p>}
 										<p>
 											{i18n.balance} :{' '}
-											{metaMaskNetworkMatchesFromNetwork
+											{metaMaskNetworkMatchesFromNetwork || fromWallet === 'Vite Wallet'
 												? fromAssetBalance || '...'
 												: i18n.metaMaskNetworkDoesNotMatch}
 										</p>
