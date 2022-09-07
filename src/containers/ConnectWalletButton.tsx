@@ -72,10 +72,6 @@ const ConnectWalletButton = ({
 								if (window?.vitePassport) {
 									try {
 										await window.vitePassport.connectWallet();
-										console.log(
-											'window.vitePassport.connectWallet:',
-											window.vitePassport.connectWallet
-										);
 										// const activeNetwork = await window.vitePassport.getNetwork();
 										setState({
 											vpAddress: await window.vitePassport.getConnectedAddress(),

@@ -11,18 +11,14 @@ export const allNetworks = {
 		BSC: {
 			// Public RPC Nodes: https://docs.bscscan.com/misc-tools-and-utilities/public-rpc-nodes
 			name: 'BSC Testnet',
-			rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545/', // this half works
-			// rpcUrl: 'https://data-seed-prebsc-2-s1.binance.org:8545/',
-			// rpcUrl: 'http://data-seed-prebsc-1-s2.binance.org:8545/',
-			// rpcUrl: 'http://data-seed-prebsc-2-s2.binance.org:8545/',
-			// rpcUrl: 'https://data-seed-prebsc-1-s3.binance.org:8545/', // this half works
-			// rpcUrl: 'https://data-seed-prebsc-2-s3.binance.org:8545/',
+			rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
 			chainId: '0x61', // Testnet(ChainID 0x61, 97 in decimal) https://docs.binance.org/smart-chain/developer/rpc.html
 			explorerUrl: '',
 		},
 		ETH: {
 			name: 'ETH Rinkeby',
 			rpcUrl: 'https://node.vite.net/eth/rinkeby',
+			// rpcUrl: 'https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
 			chainId: '0x4',
 			explorerUrl: '',
 		},

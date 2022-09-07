@@ -193,12 +193,14 @@ const Home = ({
 		return (stepsCompleted / 3) * 100;
 	}, [fromWalletConnected, channelFrom, channelTo, bridgeTransaction]);
 	const channelFromEthersProvider = useMemo(() => {
-		if (channelFrom.network !== 'VITE') {
-			return new ethers.providers.JsonRpcProvider(
-				allNetworks[networkType][channelFrom.network].rpcUrl
-			);
+		if (
+			channelFrom.network !== 'VITE' &&
+			allNetworks[networkType][channelFrom.network].chainId === metaMaskChainId
+		) {
+			// @ts-ignore
+			return new ethers.providers.Web3Provider(window.ethereum);
 		}
-	}, [channelFrom, networkType]);
+	}, [networkType, channelFrom, metaMaskChainId]);
 	const channelToEthersProvider = useMemo(() => {
 		if (channelTo.network !== 'VITE') {
 			return new ethers.providers.JsonRpcProvider(
@@ -297,9 +299,7 @@ const Home = ({
 			const amountInSmallestUnit = toSmallestUnit(amount, channelFrom.decimals);
 			if (fromWallet === 'MetaMask') {
 				// TODO: come up with better names for allowance and approved
-				console.log('fromAddress:', fromAddress);
 				if (channelFromERC20Contract) {
-					console.log('channelFromERC20Contract!.approve:', channelFromERC20Contract!.approve);
 					const allowance = await channelFromERC20Contract.allowance(
 						fromAddress,
 						channelFrom.contract
@@ -307,8 +307,6 @@ const Home = ({
 
 					// https://ethereum.org/hr/developers/tutorials/erc20-annotated-code/
 					const approved = +allowance.toString() >= +amountInSmallestUnit;
-					console.log('allowance:', allowance);
-					console.log('approved:', approved);
 					if (!approved) {
 						await channelFromERC20Contract.approve(channelFrom.contract, amountInSmallestUnit);
 					}
@@ -319,7 +317,6 @@ const Home = ({
 					channelFromEthersProvider!.getSigner(metamaskAddress)
 				);
 				const originAddr = `0x${wallet.getOriginalAddressFromAddress(destinationAddress)}`;
-				console.log('originAddr:', originAddr);
 				ethToViteInputTx = await erc20Channel.input(
 					channelFromId,
 					originAddr,
@@ -505,8 +502,6 @@ const Home = ({
 				// usually { code: 11012, message: "User Canceled" }
 				// @ts-ignore
 				setState({ toast: { 11012: i18n.userCanceled }[e.code] || e.message });
-			} else {
-				setState({ toast: e });
 			}
 		}
 	}, [
@@ -550,14 +545,15 @@ const Home = ({
 
 	useEffect(() => {
 		if (!fromAssetBalance && metamaskAddress && metaMaskNetworkMatchesFromNetwork) {
-			console.log('channelFromERC20Contract:', channelFromERC20Contract);
 			if (channelFromERC20Contract) {
 				channelFromERC20Contract
 					.balanceOf(metamaskAddress)
 					.then((data: ethers.BigNumber) =>
 						metaMaskFromAssetBalanceSet(ethers.utils.formatUnits(data))
 					)
-					.catch((e: any) => console.log('e:', e));
+					.catch((e: any) => {
+						console.log('e:', e);
+					});
 			} else {
 				metaMaskFromAssetBalanceSet(metaMaskNativeAssetBalance);
 			}
@@ -579,7 +575,9 @@ const Home = ({
 			provider
 				.getBalance(metamaskAddress)
 				.then((data) => metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data)))
-				.catch((e: any) => setState({ toast: String(e) }));
+				.catch((e: any) => {
+					console.log('e:', e);
+				});
 		}
 	}, [
 		metaMaskChainId,
@@ -670,7 +668,10 @@ const Home = ({
 												? metaMaskNetworkMatchesFromNetwork || metaMaskNetworkMatchesToNetwork
 												: true) && <p className="text-red-500">{i18n.insufficientBalance}</p>}
 										<p>
-											{i18n.balance} : {fromAssetBalance || '...'}
+											{i18n.balance} :{' '}
+											{metaMaskNetworkMatchesFromNetwork
+												? fromAssetBalance || '...'
+												: i18n.metaMaskNetworkDoesNotMatch}
 										</p>
 									</div>
 								</div>
