@@ -74,7 +74,6 @@ const ConnectWalletButton = ({
 										await window.vitePassport.connectWallet();
 										// const activeNetwork = await window.vitePassport.getNetwork();
 										setState({
-											vpAddress: await window.vitePassport.getConnectedAddress(),
 											// activeNetworkIndex: networkList.findIndex(
 											// 	(n) => n.rpcUrl === activeNetwork.rpcUrl
 											// ),

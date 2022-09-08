@@ -17,7 +17,7 @@ const App = () => {
 			const vcSession = getValidVCSession();
 			const vcInstance = vcSession ? initViteConnect(vcSession) : undefined;
 			let vpAddress: undefined | string;
-			if (window?.vitePassport?.getConnectedAddress) {
+			if (window?.vitePassport) {
 				vpAddress = await window.vitePassport.getConnectedAddress();
 			}
 			const state: Partial<State> = {

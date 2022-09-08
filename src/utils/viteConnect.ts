@@ -55,8 +55,8 @@ export class VC extends Connector {
 }
 
 export function getValidVCSession() {
-	let sessionData = null;
-	let session = null;
+	let sessionData: null | { timestamp: number; session: object } = null;
+	let session: null | object = null;
 	try {
 		const tm = localStorage.getItem(VCSessionKey);
 		if (tm) {

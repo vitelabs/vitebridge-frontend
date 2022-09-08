@@ -89,6 +89,7 @@ export const query = async (
 			const resultBytes = utils._Buffer.from(result, 'base64').toString('hex');
 			const outputs = [];
 			for (let i = 0; i < methodAbi.outputs.length; i++) {
+				// @ts-ignore
 				outputs.push(methodAbi.outputs[i].type);
 			}
 			return abiUtil.decodeParameters(outputs, resultBytes);

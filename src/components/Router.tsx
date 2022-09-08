@@ -40,7 +40,7 @@ const Router = ({ setState, vpAddress, vcInstance, networkType }: Props) => {
 
 	// useEffect(() => {
 	// 	let unsubscribe = () => {};
-	// 	if (vpAddress && vpAddress === activeViteAddress && window?.vitePassport?.on) {
+	// 	if (vpAddress && vpAddress === activeViteAddress && window?.vitePassport) {
 	// 		unsubscribe = window.vitePassport.on('networkChange', (payload) => {
 	// 			let i = networkList.findIndex((n) => n.rpcUrl === payload.activeNetwork.rpcUrl);
 	// 			if (i === -1) {
@@ -55,7 +55,7 @@ const Router = ({ setState, vpAddress, vcInstance, networkType }: Props) => {
 
 	useEffect(() => {
 		let unsubscribe = () => {};
-		if (window?.vitePassport?.on) {
+		if (window?.vitePassport) {
 			unsubscribe = window.vitePassport.on('accountChange', (payload) => {
 				setState({ vpAddress: payload.activeAddress });
 			});

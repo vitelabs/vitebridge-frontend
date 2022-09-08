@@ -7,7 +7,7 @@ type Props = HTMLProps<HTMLInputElement> & {
 };
 
 const TextInput = ({ value, onUserInput, onMetaEnter, ...rest }: Props) => {
-	const handleInput = useCallback(
+	const handleInput: React.ChangeEventHandler<HTMLInputElement> = useCallback(
 		(event) => {
 			onUserInput(event.target.value);
 		},

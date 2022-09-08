@@ -816,9 +816,9 @@ const Home = ({
 										// `() => vcInstance?.killSession()` doesn't work by itself for some reason
 										logOut: vcInstance?.killSession
 											? () => vcInstance.killSession()
-											: window.vitePassport?.disconnectWallet
+											: window.vitePassport
 											? () => {
-													window.vitePassport?.disconnectWallet();
+													window.vitePassport!.disconnectWallet();
 													setState({ vpAddress: undefined });
 											  }
 											: undefined,
