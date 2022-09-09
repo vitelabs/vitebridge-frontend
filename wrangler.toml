@@ -3,10 +3,14 @@ compatibility_date = "2022-02-17"
 compatibility_flags = []
 name = "vite-bridge"
 route = ''
-site = {bucket = "./build", entry-point = "workers-site"}
-type = "webpack"
+site = {bucket = "./dist", entry-point = "workers-site"}
+# https://developers.cloudflare.com/workers/wrangler/cli-wrangler/commands/#generate
+type = "javascript"
 usage_model = ''
 workers_dev = true
 
 [env.buidl]
 zone_id = 'f88e2f1d3639975a214cd2a56eefba13'
+
+[build]
+command = "npm install && npm run build"
