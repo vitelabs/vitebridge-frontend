@@ -3,51 +3,47 @@ export const PROD = process.env.NODE_ENV === 'production';
 export const allNetworks = {
 	testnet: {
 		VITE: {
-			name: 'Testnet',
 			// rpcUrl: 'wss://buidl.vite.net/gvite/ws', // This isn't needed cuz the network rpc URL is handled by the wallet
 			chainId: null,
-			explorerUrl: 'https://test.vitescan.io',
 		},
 		BSC: {
 			// Public RPC Nodes: https://docs.bscscan.com/misc-tools-and-utilities/public-rpc-nodes
-			name: 'BSC Testnet',
 			rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
 			chainId: '0x61', // Testnet(ChainID 0x61, 97 in decimal) https://docs.binance.org/smart-chain/developer/rpc.html
-			explorerUrl: '',
 		},
 		ETH: {
-			name: 'ETH Rinkeby',
 			rpcUrl: 'https://node.vite.net/eth/rinkeby',
 			// rpcUrl: 'https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
 			chainId: '0x4',
-			explorerUrl: '',
+		},
+		Aurora: {
+			rpcUrl: 'https://node.vite.net/eth/rinkeby',
+			chainId: '0x4e454153',
 		},
 	},
 	mainnet: {
 		VITE: {
-			name: 'VITE Mainnet',
 			// rpcUrl: '',
 			chainId: null,
-			explorerUrl: '',
 		},
 		BSC: {
-			name: 'BSC Mainnet',
 			rpcUrl: '',
 			chainId: '',
-			explorerUrl: '',
 		},
 		ETH: {
-			name: 'ETH Mainnet',
 			rpcUrl: '',
-			chainId: '',
-			explorerUrl: '',
+			chainId: '0x1',
+		},
+		Aurora: {
+			rpcUrl: 'https://node.vite.net/eth/rinkeby',
+			chainId: '0x4e454152',
 		},
 	},
 } as const;
 
 type Channel = {
-	network: 'VITE' | 'BSC' | 'ETH';
-	desc: 'Vite Testnet' | 'BSC Testnet' | 'ETH Rinkeby';
+	network: 'VITE' | 'BSC' | 'ETH' | 'Aurora';
+	desc: 'Vite Testnet' | 'BSC Testnet' | 'ETH Rinkeby' | 'Aurora Testnet';
 	icon: string;
 	contract: string;
 	tokenId?: string;
@@ -136,6 +132,39 @@ export const viteBridgeAssets: {
 						decimals: 18,
 						confirmedThreshold: 10,
 						max: '10',
+						min: '0.1',
+						fee: {
+							fixed: '0',
+						},
+					},
+				],
+				[
+					{
+						network: 'Aurora',
+						desc: 'Aurora Testnet',
+						// todo: icon
+						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
+						contract: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
+						erc20: '0xd32C96dccD8fd57B461C9B1f8052598d15ab941C',
+						channelId: 1,
+						decimals: 18,
+						confirmedThreshold: 10,
+						max: '5',
+						min: '0.1',
+						fee: {
+							fixed: '0',
+						},
+					},
+					{
+						network: 'VITE',
+						desc: 'Vite Testnet',
+						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
+						contract: 'vite_28624c41307ff6f2e9f61b14a82dbf295353dbeb5ab5143834',
+						tokenId: 'tti_5649544520544f4b454e6e40',
+						channelId: 0,
+						decimals: 18,
+						confirmedThreshold: 70,
+						max: '5',
 						min: '0.1',
 						fee: {
 							fixed: '0',
@@ -287,4 +316,4 @@ viteBridgeAssets.tokens.forEach(({ token, channels }) => {
 	});
 });
 
-// console.log('channelCombos', JSON.stringify(channelCombos, null, 2));
+console.log('channelCombos', JSON.stringify(channelCombos, null, 2));
