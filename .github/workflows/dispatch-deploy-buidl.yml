@@ -1,11 +1,16 @@
 # This is a basic workflow to help you get started with Actions
 
-name: Deploy To Cloudflare [bridge-buidl.vite.net]
+name: Dispatch Deploy
 
 # Controls when the action will run. 
 on:
-  push:
-    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'build from'
+        required: true
+        default: "master"
+
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -21,7 +26,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         with:
-          ref: master
+          ref: ${{ github.event.inputs.branch }}
 
       - name: Read .nvmrc
         run: echo ::set-output name=NVMRC::$(cat .nvmrc)
