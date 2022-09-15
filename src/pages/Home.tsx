@@ -67,8 +67,7 @@ const Home = ({
 	);
 	const [walletPromptLoading, walletPromptLoadingSet] = useState(false);
 	const [metaMaskChainId, metaMaskChainIdSet] = useState(
-		// @ts-ignore
-		metaMaskIsSupported() ? window?.ethereum?.chainId : ''
+		metaMaskIsSupported() ? window.ethereum?.chainId : ''
 	);
 	const [metaMaskNativeAssetBalance, metaMaskNativeAssetBalanceSet] = useState<string>();
 	const [metaMaskFromAssetBalance, metaMaskFromAssetBalanceSet] = useState<string>();
@@ -118,23 +117,27 @@ const Home = ({
 		return selectedChannel.find((side) => side.desc === toNetworkOptions[toNetworkIndex].label)!;
 	}, [selectedChannel, toNetworkOptions, toNetworkIndex]);
 	const channelFromId = useMemo(() => {
-		return channelFrom?.channelId;
+		return channelFrom.channelId;
 	}, [channelFrom]);
 	const fromAddress = useMemo(
 		() => (channelFrom.network === 'VITE' ? activeViteAddress : metamaskAddress) || '',
 		[channelFrom, activeViteAddress, metamaskAddress]
 	);
-	const showEthWallet = useMemo(
-		() => channelFrom?.network === 'ETH' || channelTo?.network === 'ETH',
-		[channelFrom, channelTo]
-	);
-	const minAmount = useMemo(() => +(channelFrom?.min || 0), [channelFrom]);
-	const maxAmount = useMemo(() => +(channelFrom?.max || 0), [channelFrom]);
+	const metaMaskWalletToShow = useMemo(() => {
+		const network = channelFrom.network === 'VITE' ? channelTo.network : channelFrom.network;
+		if (network === 'VITE') throw new Error('frontend error');
+		return network;
+	}, [channelFrom, channelTo]);
+	const minAmount = useMemo(() => +(channelFrom.min || 0), [channelFrom]);
+	const maxAmount = useMemo(() => +(channelFrom.max || 0), [channelFrom]);
 	const fromWallet = useMemo(
 		() => (channelFrom.network === 'VITE' ? 'Vite Wallet' : 'MetaMask'),
 		[channelFrom]
 	);
-
+	const toWallet = useMemo(
+		() => (channelTo.network === 'VITE' ? 'Vite Wallet' : 'MetaMask'),
+		[channelTo]
+	);
 	const metaMaskNetworkMatchesFromNetwork = useMemo(
 		() => metaMaskChainId === allNetworks[networkType][channelFrom.network].chainId,
 		[metaMaskChainId, channelFrom, networkType]
@@ -197,17 +200,15 @@ const Home = ({
 			channelFrom.network !== 'VITE' &&
 			allNetworks[networkType][channelFrom.network].chainId === metaMaskChainId
 		) {
-			// @ts-ignore
 			return new ethers.providers.Web3Provider(window.ethereum);
 		}
 	}, [networkType, channelFrom, metaMaskChainId]);
 	const channelToEthersProvider = useMemo(() => {
-		if (channelTo.network !== 'VITE') {
-			return new ethers.providers.JsonRpcProvider(
-				allNetworks[networkType][channelTo.network].rpcUrl
-			);
+		// don't really have to check metaMaskChainId. Just need the provider to refresh when the MetaMask network changes
+		if (channelTo.network !== 'VITE' && metaMaskChainId) {
+			return new ethers.providers.Web3Provider(window.ethereum);
 		}
-	}, [channelTo, networkType]);
+	}, [metaMaskChainId, channelTo]);
 	const channelFromERC20Contract = useMemo(() => {
 		if (channelFrom.erc20 && channelFromEthersProvider) {
 			return new ethers.Contract(
@@ -244,28 +245,15 @@ const Home = ({
 	}, [amount, channelTo, destinationAddress, i18n, maxAmount, minAmount, setState]);
 
 	const startBridgeTransaction = useCallback(async () => {
-		if (fromWallet === 'MetaMask') {
-			if (channelFrom.network === 'BSC') {
-				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
-					return setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscMainnet,
-					});
-				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
-					return setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToBscTestnet,
-					});
-				}
-			} else if (channelFrom.network === 'ETH') {
-				if (networkType === 'mainnet' && !metaMaskNetworkMatchesFromNetwork) {
-					return setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToEthMainnet,
-					});
-				} else if (networkType === 'testnet' && !metaMaskNetworkMatchesFromNetwork) {
-					return setState({
-						toast: i18n.switchTheNetworkInYourMetaMaskWalletToRinkebyTestNetwork,
-					});
-				}
-			}
+		if (fromWallet === 'MetaMask' && !metaMaskNetworkMatchesFromNetwork) {
+			return setState({
+				toast: i18n.switchTheNetworkInYourMetaMaskWalletSoThatItMatchesTheFromNetwork,
+			});
+		}
+		if (toWallet === 'MetaMask' && !metaMaskNetworkMatchesToNetwork) {
+			return setState({
+				toast: i18n.switchTheNetworkInYourMetaMaskWalletSoThatItMatchesTheToNetwork,
+			});
 		}
 
 		if (channelFrom.network === 'VITE' && vpAddress) {
@@ -362,6 +350,7 @@ const Home = ({
 					destinationAddress,
 					amountInSmallestUnit
 				);
+				console.log('viteToEthInputSendTx:', viteToEthInputSendTx);
 				confirmingBridgeTxSet(false);
 				confirmingViteConnectSet(false);
 				transactionConfirmationStatusOpenSet(true);
@@ -375,14 +364,17 @@ const Home = ({
 					if (viteToEthInputSendTx.receiveBlockHash) break;
 					await sleep(5000);
 				}
+				console.log('viteToEthInputSendTx2:', viteToEthInputSendTx);
 				viteToEthInputReceiveTx = await viteApi.request(
 					'ledger_getAccountBlockByHash',
 					viteToEthInputSendTx.receiveBlockHash
 				);
+				console.log('viteToEthInputReceiveTx:', viteToEthInputReceiveTx);
 				const events = await getPastEvents(viteApi, channelFrom.contract, channelAbi, 'Input', {
 					fromHeight: +viteToEthInputReceiveTx.height,
 					toHeight: 0,
 				});
+				console.log('events:', events);
 				if (events && events.length > 0) {
 					viteToEthOutputTxHash = '0x' + events[0].returnValues.inputHash;
 				}
@@ -443,7 +435,7 @@ const Home = ({
 							await viteApi.request('ledger_getAccountBlockByHash', bridgeTx.toHash)
 						).confirmations;
 					}
-				} else if (viteToEthInputReceiveTx!) {
+				} else if (viteToEthInputReceiveTx) {
 					if (!fromConfirmed) {
 						viteToEthInputReceiveTx = await viteApi.request(
 							'ledger_getAccountBlockByHash',
@@ -451,7 +443,9 @@ const Home = ({
 						);
 						bridgeTx.fromHashConfirmationNums = +viteToEthInputReceiveTx.confirmations!;
 					}
+					console.log('bridgeTx:', bridgeTx);
 					const currentNumber = await channelToEthersProvider!.getBlockNumber();
+					console.log('currentNumber:', currentNumber);
 					if (!bridgeTx.toHash) {
 						const events = await channelToEthersProvider!.getLogs({
 							fromBlock: currentNumber - 100,
@@ -471,6 +465,7 @@ const Home = ({
 								bridgeTx.toHash = target.transactionHash;
 							}
 						}
+						console.log('bridgeTx2:', bridgeTx);
 					} else {
 						const viteToEthOutputTx = await channelToEthersProvider!.getTransaction(
 							bridgeTx.toHash
@@ -505,6 +500,7 @@ const Home = ({
 			}
 		}
 	}, [
+		metaMaskNetworkMatchesToNetwork,
 		metaMaskNetworkMatchesFromNetwork,
 		networkType,
 		vpAddress,
@@ -513,6 +509,7 @@ const Home = ({
 		viteApi,
 		amount,
 		fromWallet,
+		toWallet,
 		channelFromEthersProvider,
 		channelToEthersProvider,
 		channelFrom,
@@ -527,7 +524,6 @@ const Home = ({
 
 	useEffect(() => {
 		if (metaMaskIsSupported()) {
-			// @ts-ignore
 			window.ethereum.on('chainChanged', (chainId: string) => {
 				metaMaskChainIdSet(chainId);
 				metaMaskFromAssetBalanceSet(undefined);
@@ -571,7 +567,11 @@ const Home = ({
 
 	useEffect(() => {
 		const provider = channelFromEthersProvider || channelToEthersProvider;
-		if (provider && metamaskAddress) {
+		if (
+			provider &&
+			metamaskAddress &&
+			(metaMaskNetworkMatchesFromNetwork || metaMaskNetworkMatchesToNetwork)
+		) {
 			provider
 				.getBalance(metamaskAddress)
 				.then((data) => metaMaskNativeAssetBalanceSet(ethers.utils.formatEther(data)))
@@ -581,9 +581,10 @@ const Home = ({
 		}
 	}, [
 		metaMaskChainId,
+		metaMaskNetworkMatchesFromNetwork,
+		metaMaskNetworkMatchesToNetwork,
 		channelFromEthersProvider,
 		channelToEthersProvider,
-		setState,
 		metamaskAddress,
 	]);
 
@@ -777,21 +778,29 @@ const Home = ({
 							walletType: 'Vite Wallet',
 							icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
 						},
-						showEthWallet
-							? {
-									platform: 'ETH',
-									token: 'ETH',
-									desc: 'Rinkeby',
-									walletType: 'MetaMask',
-									icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
-							  }
-							: {
-									platform: 'BSC',
-									token: 'BNB',
-									desc: 'Testnet',
-									walletType: 'MetaMask',
-									icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
-							  },
+						{
+							ETH: {
+								platform: 'ETH',
+								token: 'ETH',
+								desc: 'Rinkeby',
+								walletType: 'MetaMask',
+								icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
+							},
+							BSC: {
+								platform: 'BSC',
+								token: 'BNB',
+								desc: 'Testnet',
+								walletType: 'MetaMask',
+								icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
+							},
+							Aurora: {
+								platform: 'Aurora',
+								token: 'ETH',
+								desc: 'Testnet',
+								walletType: 'MetaMask',
+								icon: 'https://static.vite.net/crypto-info/tokens/bitt/tti_9f6004f13ffbcc207692c6f4.png',
+							},
+						}[metaMaskWalletToShow],
 					].map(({ icon, platform, token, desc, walletType }) => {
 						const wallet =
 							walletType === 'MetaMask'
@@ -803,7 +812,7 @@ const Home = ({
 													? roundDownTo6Decimals(metaMaskNativeAssetBalance)
 													: '...'
 												: i18n.metaMaskNetworkDoesNotMatch,
-										addressExplorerURL: showEthWallet
+										addressExplorerURL: metaMaskWalletToShow
 											? `https://${
 													networkType === 'testnet' ? 'rinkeby.' : ''
 											  }etherscan.io/address/${metamaskAddress}`
@@ -958,7 +967,7 @@ const Home = ({
 					className="w-full max-w-lg"
 				>
 					<div className="p-6 bg-skin-viteconnect-confirm">
-						<p className="font-normal">{i18n.pleaseConfirmTransactionOnViteWalletApp}</p>
+						<p className="font-normal">{i18n.pleaseConfirmTransactionOnYourViteWallet}</p>
 					</div>
 					<div className="bg-skin-middleground space-y-7 p-7">
 						<div className="xy">
@@ -966,7 +975,7 @@ const Home = ({
 								{isDarkMode() && <source srcSet={vcConfirmDarkImageSrc} />}
 								<img
 									src={vcConfirmImageSrc}
-									alt={i18n.pleaseConfirmTransactionOnViteWalletApp}
+									alt={i18n.pleaseConfirmTransactionOnYourViteWallet}
 									className="h-32"
 								/>
 							</picture>

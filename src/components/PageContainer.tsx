@@ -19,7 +19,7 @@ const PageContainer = ({ setState, languageType, networkType, i18n, children }: 
 		import(`../i18n/${languageType}.ts`).then((translation) => {
 			setState({ i18n: translation.default });
 		});
-	}, [languageType]); // eslint-disable-line
+	}, [setState, languageType]);
 
 	return !i18n ? null : (
 		<div className="min-h-screen">

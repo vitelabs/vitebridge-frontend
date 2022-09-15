@@ -30,6 +30,7 @@ type VitePassport = {
 declare global {
 	interface Window {
 		vitePassport?: VitePassport;
+		ethereum: any;
 	}
 }
 

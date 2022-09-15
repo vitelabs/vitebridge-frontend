@@ -24,19 +24,18 @@ const mainnetRPC = new provider(providerWsURLs.mainnet, providerTimeout, provide
 type Props = State;
 
 const Router = ({ setState, vpAddress, vcInstance, networkType }: Props) => {
-	const viteApi = useMemo(() => {
-		const viteApi = new ViteAPI(networkType === 'mainnet' ? mainnetRPC : testnetRPC, () => {
-			// console.log('client connected');
-		});
-		return viteApi;
-	}, [networkType]); // eslint-disable-line
+	const viteApi = useMemo(
+		() => new ViteAPI(networkType === 'mainnet' ? mainnetRPC : testnetRPC, () => {}),
+		[networkType]
+	);
 
 	const activeViteAddress = useMemo(() => {
 		return vpAddress || vcInstance?.accounts[0];
 	}, [vpAddress, vcInstance]);
-	useEffect(() => {
-		setState({ activeViteAddress });
-	}, [setState, activeViteAddress]);
+
+	useEffect(() => setState({ viteApi }), [setState, viteApi]);
+
+	useEffect(() => setState({ activeViteAddress }), [setState, activeViteAddress]);
 
 	// useEffect(() => {
 	// 	let unsubscribe = () => {};
@@ -63,8 +62,6 @@ const Router = ({ setState, vpAddress, vcInstance, networkType }: Props) => {
 		return unsubscribe;
 	}, [setState]);
 
-	useEffect(() => setState({ viteApi }), [viteApi]); // eslint-disable-line
-
 	const getBalanceInfo = useCallback(
 		(address: string) => {
 			return viteApi.getBalanceInfo(address);
@@ -82,7 +79,6 @@ const Router = ({ setState, vpAddress, vcInstance, networkType }: Props) => {
 	useEffect(() => {
 		if (metaMaskIsSupported()) {
 			// https://docs.metamask.io/guide/ethereum-provider.html#accountschanged
-			// @ts-ignore
 			window.ethereum.on('accountsChanged', (accounts: string[]) => {
 				// OPTIMIZE: https://ethereum.stackexchange.com/questions/88084/how-to-clean-up-unused-meta-mask-event-listeners
 				// IDEA: const connected = !!accounts.length;

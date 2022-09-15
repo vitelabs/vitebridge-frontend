@@ -2,42 +2,16 @@ export const PROD = process.env.NODE_ENV === 'production';
 
 export const allNetworks = {
 	testnet: {
-		VITE: {
-			// rpcUrl: 'wss://buidl.vite.net/gvite/ws', // This isn't needed cuz the network rpc URL is handled by the wallet
-			chainId: null,
-		},
-		BSC: {
-			// Public RPC Nodes: https://docs.bscscan.com/misc-tools-and-utilities/public-rpc-nodes
-			rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
-			chainId: '0x61', // Testnet(ChainID 0x61, 97 in decimal) https://docs.binance.org/smart-chain/developer/rpc.html
-		},
-		ETH: {
-			rpcUrl: 'https://node.vite.net/eth/rinkeby',
-			// rpcUrl: 'https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
-			chainId: '0x4',
-		},
-		Aurora: {
-			rpcUrl: 'https://node.vite.net/eth/rinkeby',
-			chainId: '0x4e454153',
-		},
+		VITE: { chainId: null },
+		BSC: { chainId: '0x61' },
+		ETH: { chainId: '0x4' },
+		Aurora: { chainId: '0x4e454153' },
 	},
 	mainnet: {
-		VITE: {
-			// rpcUrl: '',
-			chainId: null,
-		},
-		BSC: {
-			rpcUrl: '',
-			chainId: '',
-		},
-		ETH: {
-			rpcUrl: '',
-			chainId: '0x1',
-		},
-		Aurora: {
-			rpcUrl: 'https://node.vite.net/eth/rinkeby',
-			chainId: '0x4e454152',
-		},
+		VITE: { chainId: null },
+		BSC: { chainId: '' },
+		ETH: { chainId: '0x1' },
+		Aurora: { chainId: '0x4e454152' },
 	},
 } as const;
 
@@ -143,7 +117,7 @@ export const viteBridgeAssets: {
 						network: 'Aurora',
 						desc: 'Aurora Testnet',
 						// todo: icon
-						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
+						icon: 'https://static.vite.net/crypto-info/tokens/bitt/tti_9f6004f13ffbcc207692c6f4.png',
 						contract: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
 						erc20: '0xd32C96dccD8fd57B461C9B1f8052598d15ab941C',
 						channelId: 1,
@@ -316,4 +290,4 @@ viteBridgeAssets.tokens.forEach(({ token, channels }) => {
 	});
 });
 
-console.log('channelCombos', JSON.stringify(channelCombos, null, 2));
+// console.log('channelCombos', JSON.stringify(channelCombos, null, 2));
