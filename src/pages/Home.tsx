@@ -60,7 +60,7 @@ const Home = ({
 	const [fromNetworkIndex, fromNetworkIndexSet] = useState(0);
 	const [toNetworkIndex, toNetworkIndexSet] = useState(0);
 	const [destinationAddress, destinationAddressSet] = useState('');
-	const [amount, amountSet] = useState(PROD ? '' : '0.1'); // saves time during development
+	const [amount, amountSet] = useState(PROD ? '' : '0.01'); // saves time during development
 	const [agreesToTerms, agreesToTermsSet] = useState(false);
 	const [bridgeTransaction, bridgeTransactionSet] = useState<Partial<BridgeTransaction> | null>(
 		null
@@ -169,9 +169,9 @@ const Home = ({
 		viteBalanceInfo,
 		channelFrom,
 	]);
-	const fromAssetBalanceIsBelowMinBridgeAmount = useMemo(() => {
-		return +fromAssetBalance < +channelFrom.min;
-	}, [fromAssetBalance, channelFrom]);
+	const fromAssetBalanceIsBelowInputAmount = useMemo(() => {
+		return +fromAssetBalance < +amount;
+	}, [fromAssetBalance, amount]);
 	const fromWalletConnected = useMemo(() => {
 		if (fromWallet === 'Vite Wallet') {
 			return !!activeViteAddress;
@@ -658,7 +658,7 @@ const Home = ({
 								<div className="flex justify-between">
 									<p className="text-xs font-semibold">{i18n.amount}</p>
 									<div className="flex gap-4 text-xs font-normal">
-										{fromAssetBalanceIsBelowMinBridgeAmount &&
+										{fromAssetBalanceIsBelowInputAmount &&
 											fromAssetBalance &&
 											(fromWallet === 'MetaMask'
 												? metaMaskNetworkMatchesFromNetwork || metaMaskNetworkMatchesToNetwork
@@ -697,7 +697,7 @@ const Home = ({
 								/>
 							</div>
 							<button
-								disabled={fromAssetBalanceIsBelowMinBridgeAmount}
+								disabled={fromAssetBalanceIsBelowInputAmount}
 								className="blue-rect"
 								onClick={openBridgeConfirmationModal}
 							>
