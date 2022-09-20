@@ -292,28 +292,23 @@ const Home = ({
 						fromAddress,
 						channelFrom.contract
 					);
-
 					// https://ethereum.org/hr/developers/tutorials/erc20-annotated-code/
 					const approved = +allowance.toString() >= +amountInSmallestUnit;
 					if (!approved) {
 						await channelFromERC20Contract.approve(channelFrom.contract, amountInSmallestUnit);
 					}
 				}
-				const erc20Channel = new ethers.Contract(
+				const ethChannel = new ethers.Contract(
 					channelFrom.contract,
 					channelAbi,
 					channelFromEthersProvider!.getSigner(metamaskAddress)
 				);
 				const originAddr = `0x${wallet.getOriginalAddressFromAddress(destinationAddress)}`;
-				ethToViteInputTx = await erc20Channel.input(
-					channelFromId,
-					originAddr,
-					amountInSmallestUnit,
-					{
-						// https://github.com/MetaMask/metamask-extension/issues/7286#issuecomment-557838325
-						gasLimit: 1000000,
-					}
-				);
+				ethToViteInputTx = await ethChannel.input(channelFromId, originAddr, amountInSmallestUnit, {
+					// https://github.com/MetaMask/metamask-extension/issues/7286#issuecomment-557838325
+					gasLimit: 1000000,
+					value: channelFromERC20Contract ? 0 : amountInSmallestUnit,
+				});
 				confirmingBridgeTxSet(false);
 				confirmingViteConnectSet(false);
 				transactionConfirmationStatusOpenSet(true);
@@ -350,7 +345,7 @@ const Home = ({
 					destinationAddress,
 					amountInSmallestUnit
 				);
-				console.log('viteToEthInputSendTx:', viteToEthInputSendTx);
+				// console.log('viteToEthInputSendTx:', viteToEthInputSendTx);
 				confirmingBridgeTxSet(false);
 				confirmingViteConnectSet(false);
 				transactionConfirmationStatusOpenSet(true);
@@ -364,17 +359,17 @@ const Home = ({
 					if (viteToEthInputSendTx.receiveBlockHash) break;
 					await sleep(5000);
 				}
-				console.log('viteToEthInputSendTx2:', viteToEthInputSendTx);
+				// console.log('viteToEthInputSendTx2:', viteToEthInputSendTx);
 				viteToEthInputReceiveTx = await viteApi.request(
 					'ledger_getAccountBlockByHash',
 					viteToEthInputSendTx.receiveBlockHash
 				);
-				console.log('viteToEthInputReceiveTx:', viteToEthInputReceiveTx);
+				// console.log('viteToEthInputReceiveTx:', viteToEthInputReceiveTx);
 				const events = await getPastEvents(viteApi, channelFrom.contract, channelAbi, 'Input', {
 					fromHeight: +viteToEthInputReceiveTx.height,
 					toHeight: 0,
 				});
-				console.log('events:', events);
+				// console.log('events:', events);
 				if (events && events.length > 0) {
 					viteToEthOutputTxHash = '0x' + events[0].returnValues.inputHash;
 				}
@@ -443,9 +438,9 @@ const Home = ({
 						);
 						bridgeTx.fromHashConfirmationNums = +viteToEthInputReceiveTx.confirmations!;
 					}
-					console.log('bridgeTx:', bridgeTx);
+					// console.log('bridgeTx:', bridgeTx);
 					const currentNumber = await channelToEthersProvider!.getBlockNumber();
-					console.log('currentNumber:', currentNumber);
+					// console.log('currentNumber:', currentNumber);
 					if (!bridgeTx.toHash) {
 						const events = await channelToEthersProvider!.getLogs({
 							fromBlock: currentNumber - 100,
@@ -465,7 +460,7 @@ const Home = ({
 								bridgeTx.toHash = target.transactionHash;
 							}
 						}
-						console.log('bridgeTx2:', bridgeTx);
+						// console.log('bridgeTx2:', bridgeTx);
 					} else {
 						const viteToEthOutputTx = await channelToEthersProvider!.getTransaction(
 							bridgeTx.toHash

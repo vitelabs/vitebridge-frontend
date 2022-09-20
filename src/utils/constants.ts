@@ -116,13 +116,12 @@ export const viteBridgeAssets: {
 					{
 						network: 'Aurora',
 						desc: 'Aurora Testnet',
-						// todo: icon
-						icon: 'https://static.vite.net/crypto-info/tokens/bitt/tti_9f6004f13ffbcc207692c6f4.png',
+						icon: 'https://static.vite.net/image-1257137467/logo/aurora.png',
 						contract: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
 						erc20: '0xd32C96dccD8fd57B461C9B1f8052598d15ab941C',
 						channelId: 1,
 						decimals: 18,
-						confirmedThreshold: 10,
+						confirmedThreshold: 70,
 						max: '5',
 						min: '0.1',
 						fee: {
@@ -149,7 +148,7 @@ export const viteBridgeAssets: {
 		},
 		{
 			token: 'USDV',
-			icon: 'https://static.vite.net/crypto-info/tokens/autk/tti_b0de22e5d54c92c43c3a9e54.jpg',
+			icon: 'https://static.vite.net/image-1257137467/logo/usdt-logo2.png',
 			channels: [
 				[
 					{
