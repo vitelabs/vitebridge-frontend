@@ -19,9 +19,14 @@ type IconRowProps = {
 	onClick?: () => void;
 };
 const IconRow = ({ big, className, icon, label, onClick }: IconRowProps) => (
-	<div className={`px-4 flex items-center gap-2 ${big ? 'py-2' : 'py-1'} ${className}`} onClick={onClick}>
+	<div
+		className={`px-4 flex items-center gap-2 ${big ? 'py-2' : 'py-1'} ${className}`}
+		onClick={onClick}
+	>
 		{big && <img src={icon} alt={label} className="h-8" />}
-		<p className={`text-sm ${big ? '' : 'text-skin-secondary font-normal dark:text-skin-base'}`}>{label}</p>
+		<p className={`text-sm ${big ? '' : 'text-skin-secondary font-normal dark:text-skin-base'}`}>
+			{label}
+		</p>
 	</div>
 );
 
@@ -54,12 +59,14 @@ const Picker = ({ big, selectedIndex, options, onPick }: Props) => {
 						className={open ? 'opacity-50' : ''}
 					/>
 				) : (
-					<p className="text-sm text-skin-secondary font-normal dark:text-skin-base">{options[selectedIndex].label}</p>
+					<p className="text-sm text-skin-secondary font-normal dark:text-skin-base">
+						{options[selectedIndex].label}
+					</p>
 				)}
 				<div
-					className={`h-4 w-4 rounded-full border-skin-highlight border xy transition ${big ? 'mr-4' : ''} ${
-						open ? 'rotate-180' : ''
-					}`}
+					className={`h-4 w-4 rounded-full border-skin-highlight border xy transition ${
+						big ? 'mr-4' : ''
+					} ${open ? 'rotate-180' : ''}`}
 				>
 					<ChevronDown className="mt-0.5 text-skin-highlight w-10" />
 				</div>

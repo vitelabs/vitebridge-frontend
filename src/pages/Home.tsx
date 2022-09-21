@@ -492,6 +492,8 @@ const Home = ({
 				// usually { code: 11012, message: "User Canceled" }
 				// @ts-ignore
 				setState({ toast: { 11012: i18n.userCanceled }[e.code] || e.message });
+			} else {
+				setState({ toast: e });
 			}
 		}
 	}, [
