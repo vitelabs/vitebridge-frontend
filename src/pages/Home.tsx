@@ -486,6 +486,8 @@ const Home = ({
 			}
 		} catch (e: any) {
 			console.log('e:', e);
+			confirmingBridgeTxSet(false);
+			transactionConfirmationStatusOpenSet(false);
 			walletPromptLoadingSet(false);
 			confirmingViteConnectSet(false);
 			if (e?.code) {
