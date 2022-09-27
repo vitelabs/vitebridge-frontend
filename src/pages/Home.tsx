@@ -797,7 +797,7 @@ const Home = ({
 								token: 'ETH',
 								desc: 'Testnet',
 								walletType: 'MetaMask',
-								icon: 'https://static.vite.net/crypto-info/tokens/bitt/tti_9f6004f13ffbcc207692c6f4.png',
+								icon: 'https://static.vite.net/image-1257137467/logo/aurora.png',
 							},
 						}[metaMaskWalletToShow],
 					].map(({ icon, platform, token, desc, walletType }) => {
