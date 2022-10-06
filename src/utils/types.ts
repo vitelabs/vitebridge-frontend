@@ -1,43 +1,86 @@
-import { setStateType } from './global-context';
-import { VC } from './vc';
+import { AccountBlockBlock } from '@vite/vitejs/distSrc/utils/type';
+import { ViteAPI } from '@vite/vitejs/distSrc/viteAPI/type';
+import en from '../i18n/en';
+import { setStateType } from './globalContext';
+import { VC } from './viteConnect';
+
+type Network = {
+	name: string;
+	rpcUrl: string;
+	explorerUrl?: string;
+};
+
+type injectedScriptEvents = 'accountChange' | 'networkChange';
+type VitePassport = {
+	// These methods are relayed from contentScript.ts => injectedScript.ts
+	getConnectedAddress: () => Promise<undefined | string>;
+	disconnectWallet: () => Promise<undefined>;
+	getNetwork: () => Promise<Network>;
+
+	// These methods are relayed from contentScript.ts => background.ts => popup => contentScript.ts => injectedScript.ts
+	connectWallet: () => Promise<{ domain: string }>;
+	writeAccountBlock: (type: string, params: object) => Promise<{ block: AccountBlockBlock }>;
+
+	// `on` subscribes to `event` and returns an unsubscribe function
+	on: (
+		event: injectedScriptEvents,
+		callback: (payload: { activeAddress?: string; activeNetwork: Network }) => void
+	) => () => void;
+};
+declare global {
+	interface Window {
+		vitePassport?: VitePassport;
+		ethereum: any;
+	}
+}
 
 export type Balance = {
 	[tokenId: string]: string;
 };
 
-export type Networks = 'vite' | 'bsc';
-export type NetworkTypes = 'testnet' | 'mainnet';
-
 export type State = {
 	setState: setStateType;
-	toast: string;
-	networkType: NetworkTypes;
-	language: string;
-	i18n: { [key: string]: string };
-	vcInstance: VC | null;
+	viteApi: ViteAPI;
+	toast: any;
+	networkType: 'testnet' | 'mainnet';
+	languageType: string;
+	i18n: typeof en;
+	vcInstance?: VC;
+	vpAddress?: string;
 	metamaskAddress: string;
-	balances: {
-		[network in Networks]: {
-			[networkType in NetworkTypes]: Balance;
+	viteBalanceInfo: ViteBalanceInfo;
+	activeViteAddress?: string;
+};
+
+export type ViteBalanceInfo = {
+	balance: {
+		address: string;
+		blockCount: string;
+		balanceInfoMap?: {
+			[tokenId: string]: {
+				tokenInfo: TokenInfo;
+				balance: string;
+			};
 		};
 	};
-	tokens: {
-		[tokenId: string]: TokenInfo;
+	unreceived: {
+		address: string;
+		blockCount: string;
 	};
 };
 
 export type TokenInfo = {
-	decimals: number;
-	index: number;
-	isOwnerBurnOnly: boolean;
-	isReIssuable: boolean;
-	maxSupply: string;
-	owner: string;
-	ownerBurnOnly: boolean;
-	tokenId: string;
 	tokenName: string;
 	tokenSymbol: string;
 	totalSupply: string;
+	decimals: number;
+	owner: string;
+	tokenId: string;
+	maxSupply: string;
+	ownerBurnOnly: false;
+	isReIssuable: false;
+	index: number;
+	isOwnerBurnOnly: false;
 };
 
 export type NewAccountBlock = {
@@ -48,8 +91,8 @@ export type NewAccountBlock = {
 };
 
 export type BridgeTransaction = {
-	id: string;
-	idx: string;
+	// id: string;
+	// idx: string;
 	amount: string;
 	fromAddress: string;
 	toAddress: string;

@@ -3,7 +3,7 @@ compatibility_date = "2022-09-06"
 compatibility_flags = []
 name = "vite-bridge"
 route = ''
-site = {bucket = "./build", entry-point = "workers-site"}
+site = {bucket = "./dist", entry-point = "workers-site"}
 type = "webpack"
 usage_model = ''
 workers_dev = true

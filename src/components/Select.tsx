@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import { useRef } from 'react';
 import ChevronDown from '../assets/ChevronDown';
 
 type Props = {
@@ -9,12 +9,6 @@ type Props = {
 
 const Select = ({ value, options, onUserInput }: Props) => {
 	const select = useRef<HTMLSelectElement>(null);
-	const handleInput = useCallback(
-		(event) => {
-			onUserInput(event.target.value);
-		},
-		[onUserInput]
-	);
 
 	return (
 		<div className="xy relative">
@@ -22,7 +16,7 @@ const Select = ({ value, options, onUserInput }: Props) => {
 			<select
 				ref={select}
 				className="text-sm font-semibold cursor-pointer text-skin-muted z-10 pr-5"
-				onChange={handleInput}
+				onChange={(event) => onUserInput(event.target.value)}
 				value={value}
 			>
 				{options.map((value) => {

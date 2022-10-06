@@ -1,4 +1,4 @@
-import { useRef, ReactNode, useMemo, useEffect, useState } from 'react';
+import { useRef, ReactNode, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useKeyPress } from '../utils/hooks';
 
@@ -10,10 +10,11 @@ type Props = {
 	noX?: boolean;
 };
 
+const modalParent = document.getElementById('modal')!;
+
 const Modal = ({ header, noX, onClose = () => {}, children, className }: Props) => {
 	const mouseDraggingModal = useRef(false);
 	const [index, indexSet] = useState<number>();
-	const modalParent: HTMLElement | null = useMemo(() => document.getElementById('modal'), []);
 
 	useEffect(() => {
 		indexSet(modalParent?.children.length);
@@ -32,7 +33,7 @@ const Modal = ({ header, noX, onClose = () => {}, children, className }: Props) 
 				document.body.style.overflow = 'visible';
 			}
 		};
-	}, [modalParent?.children.length]);
+	}, []);
 
 	return modalParent
 		? ReactDOM.createPortal(

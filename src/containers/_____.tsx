@@ -1,9 +1,10 @@
-import { connect } from '../utils/global-context';
+/* eslint-disable */
+
+import { connect } from '../utils/globalContext';
 import { State } from '../utils/types';
 
 type Props = State & {};
 
-// eslint-disable-next-line
 const _____ = ({}: Props) => {
 	return (
 		<div className="">
@@ -12,4 +13,4 @@ const _____ = ({}: Props) => {
 	);
 };
 
-export default connect('i18n')(_____);
+export default connect(_____);

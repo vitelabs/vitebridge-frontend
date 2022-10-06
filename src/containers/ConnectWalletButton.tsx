@@ -1,9 +1,9 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import Modal from '../components/Modal';
 import QR from '../components/QR';
-import { connect } from '../utils/global-context';
+import { connect } from '../utils/globalContext';
 import { State } from '../utils/types';
-import { initVC } from '../utils/vc';
+import { initViteConnect } from '../utils/viteConnect';
 import { metaMaskIsSupported, promptMetaMaskAccount } from '../utils/wallet';
 
 type Props = State & {
@@ -12,8 +12,21 @@ type Props = State & {
 	className?: string;
 };
 
-const ConnectWalletButton = ({ setState, i18n, children, walletType, className, vcInstance }: Props) => {
+const ConnectWalletButton = ({
+	setState,
+	i18n,
+	children,
+	walletType,
+	className,
+	vcInstance,
+}: Props) => {
 	const [connectURI, connectURISet] = useState('');
+
+	useEffect(() => {
+		if (vcInstance) {
+			vcInstance.on('disconnect', () => setState({ vcInstance: undefined }));
+		}
+	}, [setState, vcInstance]);
 
 	return (
 		<>
@@ -21,9 +34,10 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 				className={className}
 				onClick={async () => {
 					if (walletType === 'Vite Wallet') {
-						vcInstance = initVC();
+						vcInstance = initViteConnect();
 						connectURISet(await vcInstance.createSession());
 						vcInstance.on('connect', () => {
+							connectURISet('');
 							setState({ vcInstance });
 						});
 					} else {
@@ -47,10 +61,34 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 			{connectURI && (
 				<Modal header="ViteConnect" onClose={() => connectURISet('')}>
 					<div className="p-5 text-sm font-semibold">{i18n.scanTheQrCodeViaViteWalletApp}</div>
-					<div className="px-20 pt-8 pb-10 xy">
-						<div className="h-64 w-64 bg-white p-2">
+					<div className="px-20 pt-8 pb-10 fy gap-3">
+						<div className="bg-white p-2">
 							<QR text={connectURI} />
 						</div>
+						<p className="text-lg">{i18n.or}</p>
+						<button
+							className="blue-rect"
+							onClick={async () => {
+								if (window?.vitePassport) {
+									try {
+										await window.vitePassport.connectWallet();
+										// const activeNetwork = await window.vitePassport.getNetwork();
+										setState({
+											// activeNetworkIndex: networkList.findIndex(
+											// 	(n) => n.rpcUrl === activeNetwork.rpcUrl
+											// ),
+										});
+									} catch (error) {
+										setState({ toast: error });
+									}
+									connectURISet('');
+								} else {
+									setState({ toast: i18n.vitePassportNotDetected });
+								}
+							}}
+						>
+							{i18n.connectWithVitePassport}
+						</button>
 					</div>
 				</Modal>
 			)}
@@ -58,4 +96,4 @@ const ConnectWalletButton = ({ setState, i18n, children, walletType, className, 
 	);
 };
 
-export default connect('i18n, vcInstance')(ConnectWalletButton);
+export default connect(ConnectWalletButton);

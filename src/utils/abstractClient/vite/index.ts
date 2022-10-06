@@ -1,76 +1,56 @@
-import { accountBlock } from '@vite/vitejs';
-import { Buffer } from 'buffer/'; // note: the trailing slash is important!
-import _viteAbi from './channel.json';
+import { accountBlock, utils } from '@vite/vitejs';
+import _viteAbi from './channel.vite.abi.json';
 import offChainCode from './offChainCode';
-import { viteClient } from '../../vitescripts';
-import { VC } from '../../vc';
+import { VC } from '../../viteConnect';
+import { Transaction as ViteTransaction } from '@vite/vitejs/distSrc/accountBlock/type';
+// TODO: use the right type
 
-export class ChannelVite {
-	viteProvider: typeof viteClient;
+export class ViteChannel {
 	viteChannelAddress: string;
-
-	vcInstance: VC;
+	vpAddress?: string;
+	vcInstance?: VC;
 	viteChannelAbi: any[];
 	viteOffChainCode: any;
 	tokenId: string;
 
-	constructor(config: { vcInstance: VC; address: string; tokenId: string }) {
+	constructor(config: { vpAddress?: string; vcInstance?: VC; address: string; tokenId: string }) {
+		if (!config.vpAddress && !config.vcInstance) {
+			throw new Error('config.vpAddress or config.vcInstance must be provided');
+		}
+
+		this.vpAddress = config.vpAddress;
 		this.vcInstance = config.vcInstance;
 		this.viteChannelAbi = _viteAbi;
-		this.viteOffChainCode = Buffer.from(offChainCode, 'hex').toString('base64');
-		this.viteProvider = viteClient;
+		this.viteOffChainCode = utils._Buffer.from(offChainCode, 'hex').toString('base64');
 		this.viteChannelAddress = config.address;
 		this.tokenId = config.tokenId;
 	}
 
-	async input(address: string, value: string) {
+	async input(channelId: number, address: string, value: string) {
 		const methodName = 'input';
-		const methodAbi = this.viteChannelAbi.find((x) => x.name === methodName && x.type === 'function');
+		const methodAbi = this.viteChannelAbi.find(
+			(x) => x.name === methodName && x.type === 'function'
+		);
 		if (!methodAbi) {
 			throw new Error(`method not found: ${methodName}`);
 		}
 
-		const block = await accountBlock.createAccountBlock('callContract', {
-			address: this.vcInstance.accounts[0],
-			abi: methodAbi,
-			toAddress: this.viteChannelAddress,
-			params: [address, value],
-			tokenId: this.tokenId,
-			amount: value,
-		}).accountBlock;
+		const params = [
+			'callContract',
+			{
+				address: this.vpAddress || this.vcInstance!.accounts[0],
+				abi: methodAbi,
+				toAddress: this.viteChannelAddress,
+				params: [channelId, address, value],
+				tokenId: this.tokenId,
+				amount: value,
+			},
+		] as const;
 
-		return this.vcInstance.sendVcTx({ block });
+		if (this.vcInstance) {
+			const block = await accountBlock.createAccountBlock(...params).accountBlock;
+			return this.vcInstance.signAndSendTx([{ block }]) as Promise<ViteTransaction>;
+		}
+		return (await window.vitePassport!.writeAccountBlock(...params)).block;
 	}
-
-	async prevInputId() {
-		return readContract(
-			this.viteProvider,
-			this.viteChannelAddress,
-			this.viteChannelAbi,
-			this.viteOffChainCode,
-			'prevInputId',
-			[]
-		);
-	}
-}
-
-async function readContract(
-	provider: typeof viteClient,
-	to: string,
-	abi: Array<{ name: string; type: string }>,
-	code: string,
-	methodName: string,
-	params: any[]
-) {
-	const methodAbi = abi.find((x) => x.type === 'offchain' && x.name === methodName);
-	if (!methodAbi) {
-		throw new Error(`method not found:${methodName}`);
-	}
-
-	return provider.callOffChainContract({
-		address: to,
-		abi: methodAbi,
-		code: code,
-		params: params,
-	});
 }
