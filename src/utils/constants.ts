@@ -3,21 +3,23 @@ export const PROD = process.env.NODE_ENV === 'production';
 export const allNetworks = {
 	testnet: {
 		VITE: { chainId: null },
-		BSC: { chainId: '0x61' },
-		ETH: { chainId: '0x4' },
-		Aurora: { chainId: '0x4e454153' },
+		BSC: { chainId: '0x61' }, // chainId: 97
+		ETH: { chainId: '0x5' },  // rinkby: 4, goerli: 5
+		Aurora: { chainId: '0x4e454153' }, // chainId: 1313161555
+		POLYGON: { chainId: '0x13881' }, // chainId: 80001
 	},
 	mainnet: {
 		VITE: { chainId: null },
 		BSC: { chainId: '' },
 		ETH: { chainId: '0x1' },
 		Aurora: { chainId: '0x4e454152' },
+		POLYGON: { chainId: '0x89' }, // chainId: 137
 	},
 } as const;
 
 type Channel = {
-	network: 'VITE' | 'BSC' | 'ETH' | 'Aurora';
-	desc: 'Vite Testnet' | 'BSC Testnet' | 'ETH Rinkeby' | 'Aurora Testnet';
+	network: 'VITE' | 'BSC' | 'ETH' | 'Aurora' | 'POLYGON';
+	desc: 'Vite Testnet' | 'BSC Testnet' | 'ETH Goerli' | 'Aurora Testnet' | 'POLYGON Testnet';
 	icon: string;
 	contract: string;
 	tokenId?: string;
@@ -32,7 +34,7 @@ type Channel = {
 	};
 };
 
-// https://github.com/vitelabs/vite-asset-bridge/blob/vite-bridge-rinkeby-buidl-patch/meta.json
+// https://github.com/vitelabs/vite-asset-bridge/blob/master/meta.json
 export const viteBridgeAssets: {
 	tokens: {
 		token: string;
@@ -50,8 +52,8 @@ export const viteBridgeAssets: {
 						network: 'BSC',
 						desc: 'BSC Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
-						contract: '0x78C18d3D5f86c9e3e14C13b8065018ACd0d76C11',
-						erc20: '0x84AEEa373eF0aCd04f94B15Aa36F4475A0ac6457',
+						contract: '0x767B2f5Cde13B9F19ACC467a8092776EfeB5A249',
+						erc20: '0xDa457Fb8Ab7eB1ad7Fd7F0331c2408A69cc56080',
 						channelId: 1,
 						decimals: 18,
 						confirmedThreshold: 10,
@@ -65,7 +67,7 @@ export const viteBridgeAssets: {
 						network: 'VITE',
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_e94c882e6d3905ac212440b47bcdfdd1d2730610c11213d067',
+						contract: 'vite_7927693f6c15ab76c1e796dfabdf7bc0582cf90cc460472236',
 						tokenId: 'tti_5649544520544f4b454e6e40',
 						channelId: 0,
 						decimals: 18,
@@ -80,10 +82,10 @@ export const viteBridgeAssets: {
 				[
 					{
 						network: 'ETH',
-						desc: 'ETH Rinkeby',
+						desc: 'ETH Goerli',
 						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
-						contract: '0x649a886A441f3F956e6442E064C8958D191466a6',
-						erc20: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
+						contract: '0xd32C96dccD8fd57B461C9B1f8052598d15ab941C',
+						erc20: '0x29673303B938528389eE53daf55f6d6de6e0Cf80',
 						channelId: 1,
 						decimals: 18,
 						confirmedThreshold: 10,
@@ -97,7 +99,7 @@ export const viteBridgeAssets: {
 						network: 'VITE',
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_44949d8b8fde6cd83c816d7f69581f781b68ca46cca72ec92c',
+						contract: 'vite_79793150a79b7bf66cd5c984a2ff92fcbc189e40ced82b30ed',
 						tokenId: 'tti_5649544520544f4b454e6e40',
 						channelId: 0,
 						decimals: 18,
@@ -114,8 +116,8 @@ export const viteBridgeAssets: {
 						network: 'Aurora',
 						desc: 'Aurora Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/aurora.png',
-						contract: '0xDC0B2bd7cA7deFfbf1a713F87059C9a139c5bB1D',
-						erc20: '0xd32C96dccD8fd57B461C9B1f8052598d15ab941C',
+						contract: '0xED1E920A487B2c28D2f386690995b582A34C54F2',
+						erc20: '0xCa9E81076aBc50843a9757dF093394512D556B72',
 						channelId: 1,
 						decimals: 18,
 						confirmedThreshold: 70,
@@ -129,7 +131,39 @@ export const viteBridgeAssets: {
 						network: 'VITE',
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_28624c41307ff6f2e9f61b14a82dbf295353dbeb5ab5143834',
+						contract: 'vite_d10566d5a58bfcb97ff052e7c8d608fe55b5b4ad54e409d3b0',
+						tokenId: 'tti_5649544520544f4b454e6e40',
+						channelId: 0,
+						decimals: 18,
+						confirmedThreshold: 70,
+						max: '5',
+						min: '0.1',
+						fee: {
+							fixed: '0',
+						},
+					},
+				],
+				[
+					{
+						network: 'POLYGON',
+						desc: 'POLYGON Testnet',
+						icon: 'https://static.vite.net/token-profile-1257137467/icon/19fb02528a61a094e2b74e2d5a5f2086.png',
+						contract: '0xd32C96dccD8fd57B461C9B1f8052598d15ab941C',
+						erc20: '0x29673303B938528389eE53daf55f6d6de6e0Cf80',
+						channelId: 1,
+						decimals: 18,
+						confirmedThreshold: 70,
+						max: '5',
+						min: '0.1',
+						fee: {
+							fixed: '0',
+						},
+					},
+					{
+						network: 'VITE',
+						desc: 'Vite Testnet',
+						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
+						contract: 'vite_73d5c1bd20c05408f3843745d7c64e7fdcf9e5e325994cfbf7',
 						tokenId: 'tti_5649544520544f4b454e6e40',
 						channelId: 0,
 						decimals: 18,
@@ -152,7 +186,7 @@ export const viteBridgeAssets: {
 						network: 'BSC',
 						desc: 'BSC Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/bsc-logo.png',
-						contract: '0x78C18d3D5f86c9e3e14C13b8065018ACd0d76C11',
+						contract: '0x767B2f5Cde13B9F19ACC467a8092776EfeB5A249',
 						// erc20: 'none',
 						channelId: 0,
 						decimals: 18,
@@ -167,8 +201,8 @@ export const viteBridgeAssets: {
 						network: 'VITE',
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_e94c882e6d3905ac212440b47bcdfdd1d2730610c11213d067',
-						tokenId: 'tti_87a529624c7ad1de5f971a34',
+						contract: 'vite_7927693f6c15ab76c1e796dfabdf7bc0582cf90cc460472236',
+						tokenId: 'tti_2be836f7e90b34c061de9f7b',
 						channelId: 1,
 						decimals: 18,
 						confirmedThreshold: 70,
@@ -188,11 +222,11 @@ export const viteBridgeAssets: {
 				[
 					{
 						network: 'ETH',
-						desc: 'ETH Rinkeby',
+						desc: 'ETH Goerli',
 						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
-						contract: '0x649a886A441f3F956e6442E064C8958D191466a6',
-						erc20: '0xF45143E038E14925ea99AfeE74b7b456AD178fa8',
-						channelId: 8,
+						contract: '0xd32C96dccD8fd57B461C9B1f8052598d15ab941C',
+						erc20: '0x99Bfa07e420dF905823232C4d37515981689ef5b',
+						channelId: 3,
 						decimals: 18,
 						confirmedThreshold: 10,
 						max: '5',
@@ -205,9 +239,9 @@ export const viteBridgeAssets: {
 						network: 'VITE',
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_44949d8b8fde6cd83c816d7f69581f781b68ca46cca72ec92c',
-						tokenId: 'tti_2ff7518e3ee12eb611f895fb',
-						channelId: 5,
+						contract: 'vite_79793150a79b7bf66cd5c984a2ff92fcbc189e40ced82b30ed',
+						tokenId: 'tti_608c638fb5984cf93cad6e4f',
+						channelId: 3,
 						decimals: 18,
 						confirmedThreshold: 70,
 						max: '5',
@@ -226,9 +260,9 @@ export const viteBridgeAssets: {
 				[
 					{
 						network: 'ETH',
-						desc: 'ETH Rinkeby',
+						desc: 'ETH Goerli',
 						icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
-						contract: '0x649a886A441f3F956e6442E064C8958D191466a6',
+						contract: '0xd32C96dccD8fd57B461C9B1f8052598d15ab941C',
 						// erc20: 'none',
 						channelId: 0,
 						decimals: 18,
@@ -243,9 +277,9 @@ export const viteBridgeAssets: {
 						network: 'VITE',
 						desc: 'Vite Testnet',
 						icon: 'https://static.vite.net/image-1257137467/logo/VITE-logo.png',
-						contract: 'vite_44949d8b8fde6cd83c816d7f69581f781b68ca46cca72ec92c',
+						contract: 'vite_79793150a79b7bf66cd5c984a2ff92fcbc189e40ced82b30ed',
 						tokenId: 'tti_06822f8d096ecdf9356b666c',
-						channelId: 7,
+						channelId: 1,
 						decimals: 18,
 						confirmedThreshold: 70,
 						max: '0.1',

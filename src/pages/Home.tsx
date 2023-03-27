@@ -781,7 +781,7 @@ const Home = ({
 							ETH: {
 								platform: 'ETH',
 								token: 'ETH',
-								desc: 'Rinkeby',
+								desc: 'Goerli',
 								walletType: 'MetaMask',
 								icon: 'https://static.vite.net/image-1257137467/logo/ETH-logo.png',
 							},
@@ -799,6 +799,13 @@ const Home = ({
 								walletType: 'MetaMask',
 								icon: 'https://static.vite.net/image-1257137467/logo/aurora.png',
 							},
+							POLYGON: {
+								platform: 'POLYGON',
+								token: 'MATIC',
+								desc: 'Testnet',
+								walletType: 'MetaMask',
+								icon: 'https://static.vite.net/token-profile-1257137467/icon/19fb02528a61a094e2b74e2d5a5f2086.png',
+							},
 						}[metaMaskWalletToShow],
 					].map(({ icon, platform, token, desc, walletType }) => {
 						const wallet =
@@ -813,7 +820,7 @@ const Home = ({
 												: i18n.metaMaskNetworkDoesNotMatch,
 										addressExplorerURL: metaMaskWalletToShow
 											? `https://${
-													networkType === 'testnet' ? 'rinkeby.' : ''
+													networkType === 'testnet' ? 'goerli.' : ''
 											  }etherscan.io/address/${metamaskAddress}`
 											: `https://${
 													networkType === 'testnet' ? 'testnet.' : ''
